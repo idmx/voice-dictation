@@ -85,9 +85,7 @@ class WindowsTextInjector(TextInjector):
         for char in text:
             scan = ord(char)
             inp_down = self._make_keyboard_input(scan, _KEYEVENTF_UNICODE)
-            inp_up = self._make_keyboard_input(
-                scan, _KEYEVENTF_UNICODE | _KEYEVENTF_KEYUP
-            )
+            inp_up = self._make_keyboard_input(scan, _KEYEVENTF_UNICODE | _KEYEVENTF_KEYUP)
             inputs.append(inp_down)
             inputs.append(inp_up)
 
@@ -130,9 +128,7 @@ class WindowsTextInjector(TextInjector):
             win32clipboard.OpenClipboard()
             try:
                 win32clipboard.EmptyClipboard()
-                win32clipboard.SetClipboardData(
-                    win32con.CF_UNICODETEXT, text
-                )
+                win32clipboard.SetClipboardData(win32con.CF_UNICODETEXT, text)
             finally:
                 win32clipboard.CloseClipboard()
         except Exception as exc:
@@ -143,17 +139,14 @@ class WindowsTextInjector(TextInjector):
         try:
             return ctypes.windll.user32.SendInput
         except AttributeError as exc:
-            raise InjectionError(
-                "ctypes.windll not available (Windows only)"
-            ) from exc
+            raise InjectionError("ctypes.windll not available (Windows only)") from exc
 
     @staticmethod
     def _import_win32_clip() -> tuple[Any, Any]:
         try:
             import win32clipboard  # type: ignore
             import win32con  # type: ignore
+
             return win32clipboard, win32con
         except ImportError as exc:
-            raise InjectionError(
-                "win32clipboard/win32con not available"
-            ) from exc
+            raise InjectionError("win32clipboard/win32con not available") from exc

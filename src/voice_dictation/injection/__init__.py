@@ -28,9 +28,7 @@ def create_injector(
             **kwargs,
         )
     else:
-        raise NotImplementedError(
-            "Text injection not supported on this platform"
-        )
+        raise NotImplementedError("Text injection not supported on this platform")
 
 
 __all__ = ["TextInjector", "create_injector"]

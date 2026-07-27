@@ -73,15 +73,11 @@ class MacOSTextInjector(TextInjector):
 
     def _simulate_cmd_v(self) -> None:
         quartz = self._import_quartz()
-        v_down = quartz.CGEventCreateKeyboardEvent(
-            None, _CMD_V_KEYCODE, True
-        )
+        v_down = quartz.CGEventCreateKeyboardEvent(None, _CMD_V_KEYCODE, True)
         quartz.CGEventSetFlags(v_down, _KCGEVENTFLAGMASKCOMMAND)
         quartz.CGEventPost(_KCGHIDEVENTTAP, v_down)
 
-        v_up = quartz.CGEventCreateKeyboardEvent(
-            None, _CMD_V_KEYCODE, False
-        )
+        v_up = quartz.CGEventCreateKeyboardEvent(None, _CMD_V_KEYCODE, False)
         quartz.CGEventSetFlags(v_up, _KCGEVENTFLAGMASKCOMMAND)
         quartz.CGEventPost(_KCGHIDEVENTTAP, v_up)
         logger.debug("Simulated Cmd+V")
@@ -107,8 +103,7 @@ class MacOSTextInjector(TextInjector):
     def _import_quartz() -> Any:
         try:
             import Quartz
+
             return Quartz
         except ImportError as exc:
-            raise InjectionError(
-                "Quartz framework not available (macOS only)"
-            ) from exc
+            raise InjectionError("Quartz framework not available (macOS only)") from exc

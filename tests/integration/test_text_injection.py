@@ -31,9 +31,7 @@ def mock_field() -> MagicMock:
 
 @pytest.mark.integration
 class TestTextInjectionIntegration:
-    def test_inject_into_mock_field(
-        self, mock_quartz: MagicMock, mock_field: MagicMock
-    ) -> None:
+    def test_inject_into_mock_field(self, mock_quartz: MagicMock, mock_field: MagicMock) -> None:
         received: list[str] = []
 
         def fake_write(text: str) -> None:
@@ -52,18 +50,14 @@ class TestTextInjectionIntegration:
         mock_cm.save.assert_called_once()
         mock_cm.restore.assert_called_once()
 
-    def test_inject_preserves_focus(
-        self, mock_quartz: MagicMock
-    ) -> None:
+    def test_inject_preserves_focus(self, mock_quartz: MagicMock) -> None:
         with patch.dict("sys.modules", {"Quartz": mock_quartz}):
             inj = MacOSTextInjector(method="typing", paste_delay=0)
         with patch.dict("sys.modules", {"Quartz": mock_quartz}):
             inj.inject("focus test")
         assert mock_quartz.CGEventPost.call_count > 0
 
-    def test_inject_unicode_chars(
-        self, mock_quartz: MagicMock
-    ) -> None:
+    def test_inject_unicode_chars(self, mock_quartz: MagicMock) -> None:
         written: list[str] = []
 
         def fake_write(text: str) -> None:
@@ -80,18 +74,14 @@ class TestTextInjectionIntegration:
             inj.inject("Привет, мир! Здравствуй!")
         assert written == ["Привет, мир! Здравствуй!"]
 
-    def test_rapid_injections(
-        self, mock_quartz: MagicMock
-    ) -> None:
+    def test_rapid_injections(self, mock_quartz: MagicMock) -> None:
         with patch.dict("sys.modules", {"Quartz": mock_quartz}):
             inj = MacOSTextInjector(method="typing", paste_delay=0)
         for i in range(3):
             with patch.dict("sys.modules", {"Quartz": mock_quartz}):
                 inj.inject(f"text {i}")
 
-    def test_clipboard_method_vs_typing(
-        self, mock_quartz: MagicMock
-    ) -> None:
+    def test_clipboard_method_vs_typing(self, mock_quartz: MagicMock) -> None:
         with patch.dict("sys.modules", {"Quartz": mock_quartz}):
             cb_inj = MacOSTextInjector(method="clipboard", paste_delay=0)
             ty_inj = MacOSTextInjector(method="typing", paste_delay=0)

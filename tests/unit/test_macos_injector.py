@@ -112,9 +112,7 @@ class TestClipboardInject:
             injector.inject("hello")
         mock_cm.restore.assert_called_once()
 
-    def test_clipboard_inject_with_restore_disabled(
-        self, mock_quartz: MagicMock
-    ) -> None:
+    def test_clipboard_inject_with_restore_disabled(self, mock_quartz: MagicMock) -> None:
         with patch.dict("sys.modules", {"Quartz": mock_quartz}):
             inj = MacOSTextInjector(method="clipboard", restore_clipboard=False, paste_delay=0)
         mock_cm = MagicMock()
@@ -145,9 +143,7 @@ class TestTypingInject:
         with patch.dict("sys.modules", {"Quartz": mock_quartz}):
             typing_injector.inject("Привет")
         assert mock_quartz.CGEventKeyboardSetUnicodeString.call_count == 12
-        chars_set = [
-            c.args[2] for c in mock_quartz.CGEventKeyboardSetUnicodeString.call_args_list
-        ]
+        chars_set = [c.args[2] for c in mock_quartz.CGEventKeyboardSetUnicodeString.call_args_list]
         assert "П" in chars_set
         assert "р" in chars_set
 
