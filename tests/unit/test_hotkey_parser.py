@@ -3,7 +3,7 @@
 import pytest
 
 from voice_dictation.core.exceptions import InvalidHotkeyError
-from voice_dictation.hotkey.hotkey_parser import KeyModifier, KeyCode, HotkeyCombo, parse_hotkey
+from voice_dictation.hotkey.hotkey_parser import HotkeyCombo, KeyCode, KeyModifier, parse_hotkey
 
 
 class TestParseSimple:

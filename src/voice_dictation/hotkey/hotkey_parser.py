@@ -200,9 +200,7 @@ class HotkeyParser:
             elif i == len(parts) - 1:
                 key = HotkeyParser.validate_key(part)
             else:
-                raise InvalidHotkeyError(
-                    f"Unknown modifier or key in non-final position: {part!r}"
-                )
+                raise InvalidHotkeyError(f"Unknown modifier or key in non-final position: {part!r}")
 
         if key is None:
             raise InvalidHotkeyError("Hotkey must include a non-modifier key")
@@ -246,8 +244,7 @@ class HotkeyParser:
 
 # Legacy alias map: string alias -> KeyModifier enum.
 _LEGACY_MODIFIER_ALIASES: dict[str, KeyModifier] = {
-    alias: _MODIFIER_ENUM_MAP[canonical]
-    for alias, canonical in _MODIFIER_ALIASES_STR.items()
+    alias: _MODIFIER_ENUM_MAP[canonical] for alias, canonical in _MODIFIER_ALIASES_STR.items()
 }
 
 
@@ -258,9 +255,7 @@ def parse_hotkey(hotkey_str: str) -> HotkeyCombo:
     """
     modifiers_str, key_str = HotkeyParser.parse(hotkey_str)
 
-    modifiers: frozenset[KeyModifier] = frozenset(
-        _MODIFIER_ENUM_MAP[m] for m in modifiers_str
-    )
+    modifiers: frozenset[KeyModifier] = frozenset(_MODIFIER_ENUM_MAP[m] for m in modifiers_str)
 
     if len(key_str) == 1 and (key_str.isalpha() or key_str.isdigit()):
         key = KeyCode(char=key_str)

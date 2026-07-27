@@ -106,12 +106,14 @@ class SoundDeviceCapture(AudioCapture):
             input_devices: list[dict[str, Any]] = []
             for i, dev in enumerate(devices):
                 if dev["max_input_channels"] > 0:
-                    input_devices.append({
-                        "index": i,
-                        "name": dev["name"],
-                        "sample_rate": dev["default_samplerate"],
-                        "max_channels": dev["max_input_channels"],
-                    })
+                    input_devices.append(
+                        {
+                            "index": i,
+                            "name": dev["name"],
+                            "sample_rate": dev["default_samplerate"],
+                            "max_channels": dev["max_input_channels"],
+                        }
+                    )
             return input_devices
         except (sd.PortAudioError, OSError) as e:
             raise AudioDeviceError(f"Failed to enumerate audio devices: {e}") from e
@@ -123,12 +125,14 @@ class SoundDeviceCapture(AudioCapture):
             input_devices: list[dict[str, Any]] = []
             for i, dev in enumerate(devices):
                 if dev["max_input_channels"] > 0:
-                    input_devices.append({
-                        "index": i,
-                        "name": dev["name"],
-                        "sample_rate": dev["default_samplerate"],
-                        "max_channels": dev["max_input_channels"],
-                    })
+                    input_devices.append(
+                        {
+                            "index": i,
+                            "name": dev["name"],
+                            "sample_rate": dev["default_samplerate"],
+                            "max_channels": dev["max_input_channels"],
+                        }
+                    )
             return input_devices
         except (sd.PortAudioError, OSError) as e:
             raise AudioDeviceError(f"Failed to enumerate audio devices: {e}") from e

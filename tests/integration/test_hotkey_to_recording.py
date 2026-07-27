@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from typing import Any
 
 import numpy as np
 import pytest
@@ -30,6 +30,9 @@ class MockAudioCapture(AudioCapture):
 
     def is_recording(self) -> bool:
         return self._recording
+
+    def get_devices(self) -> list[dict[str, Any]]:
+        return []
 
 
 class FakeListener:
@@ -76,9 +79,7 @@ def release_key(fake, key):
 
 
 class TestHotkeyStartsRecording:
-    def test_hotkey_starts_recording(
-        self, patched_pynput_listener, audio_capture
-    ) -> None:
+    def test_hotkey_starts_recording(self, patched_pynput_listener, audio_capture) -> None:
         listener = PynputListener(mode="push_to_talk")
         listener.register(
             "ctrl+d",
@@ -101,9 +102,7 @@ class TestHotkeyStartsRecording:
 
 
 class TestHotkeyStopsRecording:
-    def test_hotkey_stops_recording(
-        self, patched_pynput_listener, audio_capture
-    ) -> None:
+    def test_hotkey_stops_recording(self, patched_pynput_listener, audio_capture) -> None:
         listener = PynputListener(mode="push_to_talk")
         captured_audio = []
 
@@ -133,9 +132,7 @@ class TestHotkeyStopsRecording:
 
 
 class TestNoRecordingWithoutHotkey:
-    def test_no_recording_without_hotkey(
-        self, patched_pynput_listener, audio_capture
-    ) -> None:
+    def test_no_recording_without_hotkey(self, patched_pynput_listener, audio_capture) -> None:
         listener = PynputListener(mode="push_to_talk")
         listener.register(
             "ctrl+d",
@@ -157,9 +154,7 @@ class TestNoRecordingWithoutHotkey:
 
 
 class TestToggleModeStartsAndStops:
-    def test_toggle_mode_starts_and_stops(
-        self, patched_pynput_listener, audio_capture
-    ) -> None:
+    def test_toggle_mode_starts_and_stops(self, patched_pynput_listener, audio_capture) -> None:
         listener = PynputListener(mode="toggle")
         listener.register(
             "ctrl+d",
@@ -186,9 +181,7 @@ class TestToggleModeStartsAndStops:
 
 
 class TestHotkeyChangeReRegisters:
-    def test_hotkey_change_re_registers(
-        self, patched_pynput_listener, audio_capture
-    ) -> None:
+    def test_hotkey_change_re_registers(self, patched_pynput_listener, audio_capture) -> None:
         listener = PynputListener(mode="push_to_talk")
         listener.register(
             "ctrl+d",
@@ -238,9 +231,7 @@ class TestHotkeyChangeReRegisters:
 
 
 class TestSpecialKeyHotkey:
-    def test_function_key_hotkey(
-        self, patched_pynput_listener, audio_capture
-    ) -> None:
+    def test_function_key_hotkey(self, patched_pynput_listener, audio_capture) -> None:
         listener = PynputListener(mode="push_to_talk")
         listener.register(
             "ctrl+f5",
@@ -262,9 +253,7 @@ class TestSpecialKeyHotkey:
 
 
 class TestMultipleModifiersRecording:
-    def test_three_modifier_combo(
-        self, patched_pynput_listener, audio_capture
-    ) -> None:
+    def test_three_modifier_combo(self, patched_pynput_listener, audio_capture) -> None:
         listener = PynputListener(mode="push_to_talk")
         listener.register(
             "ctrl+alt+shift+t",

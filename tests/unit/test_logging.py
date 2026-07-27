@@ -22,9 +22,7 @@ class TestLoggingSetup:
             setup_logging(level="DEBUG")
             logger.info("test message for file creation")
 
-        log_file = (
-            tmp_path / ".voice-dictation" / "logs" / "voice-dictation.log"
-        )
+        log_file = tmp_path / ".voice-dictation" / "logs" / "voice-dictation.log"
         assert log_file.exists()
 
     def test_log_rotation(self, tmp_path: Path) -> None:
@@ -41,12 +39,7 @@ class TestLoggingSetup:
     def test_log_levels_respected(self, tmp_path: Path) -> None:
         with patch.object(Path, "home", return_value=tmp_path):
             setup_logging(level="WARNING")
-            log_file = (
-                tmp_path
-                / ".voice-dictation"
-                / "logs"
-                / "voice-dictation.log"
-            )
+            log_file = tmp_path / ".voice-dictation" / "logs" / "voice-dictation.log"
 
             logger.debug("debug_should_not_appear")
             logger.info("info_should_not_appear")

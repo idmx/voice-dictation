@@ -101,9 +101,7 @@ class ModelManager:
             except Exception as e:
                 if model_path.exists():
                     shutil.rmtree(model_path, ignore_errors=True)
-                raise ModelNotFoundError(
-                    f"Failed to download model '{model_size}': {e}"
-                ) from e
+                raise ModelNotFoundError(f"Failed to download model '{model_size}': {e}") from e
 
     def remove_model(self, model_size: str) -> None:
         model_path = self.get_model_path(model_size)

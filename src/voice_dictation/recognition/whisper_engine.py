@@ -65,9 +65,7 @@ class WhisperEngine(RecognitionEngine):
                 raise
             except Exception as e:
                 self._model = None
-                raise ModelLoadError(
-                    f"Failed to load model '{self._model_size}': {e}"
-                ) from e
+                raise ModelLoadError(f"Failed to load model '{self._model_size}': {e}") from e
 
     def load(self) -> None:
         self._load_model()
@@ -117,9 +115,7 @@ class WhisperEngine(RecognitionEngine):
                 vad_filter=True,
             )
             text = " ".join(segment.text.strip() for segment in segments).strip()
-            logger.debug(
-                f"Transcribed ({lang}): {text[:80]}{'...' if len(text) > 80 else ''}"
-            )
+            logger.debug(f"Transcribed ({lang}): {text[:80]}{'...' if len(text) > 80 else ''}")
             return text
         except Exception as e:
             raise TranscriptionError(f"Transcription failed: {e}") from e

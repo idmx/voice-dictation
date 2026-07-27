@@ -8,12 +8,8 @@ import pytest
 from voice_dictation.utils.clipboard import ClipboardManager
 
 
-def make_completed_process(
-    stdout: str = "", returncode: int = 0
-) -> subprocess.CompletedProcess:
-    return subprocess.CompletedProcess(
-        args=[], returncode=returncode, stdout=stdout, stderr=""
-    )
+def make_completed_process(stdout: str = "", returncode: int = 0) -> subprocess.CompletedProcess:
+    return subprocess.CompletedProcess(args=[], returncode=returncode, stdout=stdout, stderr="")
 
 
 def macos_patches():
@@ -125,9 +121,7 @@ class TestRestoreClipboardText:
 
     def test_restore_when_nothing_saved(self) -> None:
         cm = ClipboardManager()
-        with patch(
-            "voice_dictation.utils.clipboard.subprocess.run"
-        ) as mock_run:
+        with patch("voice_dictation.utils.clipboard.subprocess.run") as mock_run:
             cm.restore()
             assert not mock_run.called
 
@@ -182,9 +176,7 @@ class TestRestoreAfterTimeout:
             p_win2,
             patch(
                 "voice_dictation.utils.clipboard.subprocess.run",
-                side_effect=subprocess.TimeoutExpired(
-                    cmd=["pbcopy"], timeout=5
-                ),
+                side_effect=subprocess.TimeoutExpired(cmd=["pbcopy"], timeout=5),
             ),
         ):
             cm.restore()
@@ -212,9 +204,7 @@ class TestConcurrentClipboardAccess:
             p_win2,
             patch(
                 "voice_dictation.utils.clipboard.subprocess.run",
-                side_effect=[
-                    make_completed_process("changed by other app")
-                ],
+                side_effect=[make_completed_process("changed by other app")],
             ),
         ):
             cm.restore()
@@ -332,6 +322,4 @@ class TestClipboardWindows:
             cm._saved_text = "win restore"
             cm._saved_clipboard_available = True
             cm.restore()
-            mock_clip.SetClipboardData.assert_called_once_with(
-                13, "win restore"
-            )
+            mock_clip.SetClipboardData.assert_called_once_with(13, "win restore")
