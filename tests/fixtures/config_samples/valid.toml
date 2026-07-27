@@ -1,0 +1,14 @@
+hotkey = "alt+shift+d"
+mode = "toggle"
+whisper_model = "small"
+language = "en"
+device = "cpu"
+compute_type = "float16"
+injection_method = "clipboard"
+audio_device = 1
+sound_indicators = false
+restore_clipboard = false
+initial_prompt = "Meeting notes"
+auto_punctuation = true
+model_cache_dir = "~/.voice-dictation/models"
+log_level = "DEBUG"
