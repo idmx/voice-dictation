@@ -59,31 +59,31 @@ class MacOSTextInjector(TextInjector):
                 logger.warning(f"Clipboard restore failed (graceful): {exc}")
 
     def _inject_via_typing(self, text: str) -> None:
-        Quartz = self._import_quartz()
+        quartz = self._import_quartz()
         for char in text:
-            event_down = Quartz.CGEventCreateKeyboardEvent(None, 0, True)
-            Quartz.CGEventKeyboardSetUnicodeString(event_down, len(char), char)
-            Quartz.CGEventPost(_KCGHIDEVENTTAP, event_down)
+            event_down = quartz.CGEventCreateKeyboardEvent(None, 0, True)
+            quartz.CGEventKeyboardSetUnicodeString(event_down, len(char), char)
+            quartz.CGEventPost(_KCGHIDEVENTTAP, event_down)
 
-            event_up = Quartz.CGEventCreateKeyboardEvent(None, 0, False)
-            Quartz.CGEventKeyboardSetUnicodeString(event_up, len(char), char)
-            Quartz.CGEventPost(_KCGHIDEVENTTAP, event_up)
+            event_up = quartz.CGEventCreateKeyboardEvent(None, 0, False)
+            quartz.CGEventKeyboardSetUnicodeString(event_up, len(char), char)
+            quartz.CGEventPost(_KCGHIDEVENTTAP, event_up)
 
         logger.debug(f"Typed {len(text)} characters via CGEvent")
 
     def _simulate_cmd_v(self) -> None:
-        Quartz = self._import_quartz()
-        v_down = Quartz.CGEventCreateKeyboardEvent(
+        quartz = self._import_quartz()
+        v_down = quartz.CGEventCreateKeyboardEvent(
             None, _CMD_V_KEYCODE, True
         )
-        Quartz.CGEventSetFlags(v_down, _KCGEVENTFLAGMASKCOMMAND)
-        Quartz.CGEventPost(_KCGHIDEVENTTAP, v_down)
+        quartz.CGEventSetFlags(v_down, _KCGEVENTFLAGMASKCOMMAND)
+        quartz.CGEventPost(_KCGHIDEVENTTAP, v_down)
 
-        v_up = Quartz.CGEventCreateKeyboardEvent(
+        v_up = quartz.CGEventCreateKeyboardEvent(
             None, _CMD_V_KEYCODE, False
         )
-        Quartz.CGEventSetFlags(v_up, _KCGEVENTFLAGMASKCOMMAND)
-        Quartz.CGEventPost(_KCGHIDEVENTTAP, v_up)
+        quartz.CGEventSetFlags(v_up, _KCGEVENTFLAGMASKCOMMAND)
+        quartz.CGEventPost(_KCGHIDEVENTTAP, v_up)
         logger.debug("Simulated Cmd+V")
 
     @staticmethod

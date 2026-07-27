@@ -28,12 +28,12 @@ class _KEYBDINPUT(ctypes.Structure):
     )
 
 
-class _INPUT_UNION(ctypes.Union):
+class _InputUnion(ctypes.Union):
     _fields_ = (("ki", _KEYBDINPUT),)
 
 
 class _INPUT(ctypes.Structure):
-    _fields_ = (("type", wintypes.DWORD), ("union", _INPUT_UNION))
+    _fields_ = (("type", wintypes.DWORD), ("union", _InputUnion))
 
 
 class WindowsTextInjector(TextInjector):
@@ -80,7 +80,7 @@ class WindowsTextInjector(TextInjector):
                 logger.warning(f"Clipboard restore failed (graceful): {exc}")
 
     def _inject_via_typing(self, text: str) -> None:
-        SendInput = self._load_sendinput()
+        send_input = self._load_sendinput()
         inputs = []
         for char in text:
             scan = ord(char)
@@ -93,13 +93,13 @@ class WindowsTextInjector(TextInjector):
 
         n = len(inputs)
         arr = (_INPUT * n)(*inputs)
-        sent = SendInput(n, ctypes.pointer(arr[0]), ctypes.sizeof(_INPUT))
+        sent = send_input(n, ctypes.pointer(arr[0]), ctypes.sizeof(_INPUT))
         if sent == 0:
             raise InjectionError("SendInput returned 0 events")
         logger.debug(f"Typed {len(text)} characters via SendInput")
 
     def _simulate_ctrl_v(self) -> None:
-        SendInput = self._load_sendinput()
+        send_input = self._load_sendinput()
         inputs = [
             self._make_keyboard_input(_VK_CONTROL, 0),
             self._make_keyboard_input(_VK_V, 0),
@@ -107,7 +107,7 @@ class WindowsTextInjector(TextInjector):
             self._make_keyboard_input(_VK_CONTROL, _KEYEVENTF_KEYUP),
         ]
         arr = (_INPUT * 4)(*inputs)
-        sent = SendInput(4, ctypes.pointer(arr[0]), ctypes.sizeof(_INPUT))
+        sent = send_input(4, ctypes.pointer(arr[0]), ctypes.sizeof(_INPUT))
         if sent == 0:
             raise InjectionError("SendInput returned 0 events (Ctrl+V)")
         logger.debug("Simulated Ctrl+V")

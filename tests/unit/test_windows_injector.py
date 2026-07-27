@@ -44,7 +44,11 @@ def injector(
     mock_win32con: MagicMock,
 ) -> WindowsTextInjector:
     with (
-        patch("voice_dictation.injection.windows_injector.ctypes.windll", mock_windll),
+        patch(
+            "voice_dictation.injection.windows_injector.ctypes.windll",
+            mock_windll,
+            create=True,
+        ),
         patch.dict(
             "sys.modules",
             {
@@ -63,7 +67,11 @@ def typing_injector(
     mock_win32con: MagicMock,
 ) -> WindowsTextInjector:
     with (
-        patch("voice_dictation.injection.windows_injector.ctypes.windll", mock_windll),
+        patch(
+            "voice_dictation.injection.windows_injector.ctypes.windll",
+            mock_windll,
+            create=True,
+        ),
         patch.dict(
             "sys.modules",
             {
@@ -86,7 +94,10 @@ class TestClipboardInject:
         mock_cm = MagicMock()
         injector._clipboard = mock_cm
         with (
-            patch("voice_dictation.injection.windows_injector.ctypes.windll") as windll_mock,
+            patch(
+                "voice_dictation.injection.windows_injector.ctypes.windll",
+                create=True,
+            ) as windll_mock,
             patch.object(WindowsTextInjector, "_write_clipboard"),
             patch.dict(
                 "sys.modules",
@@ -152,7 +163,11 @@ class TestClipboardInject:
         mock_win32con: MagicMock,
     ) -> None:
         with (
-            patch("voice_dictation.injection.windows_injector.ctypes.windll", mock_windll),
+            patch(
+                "voice_dictation.injection.windows_injector.ctypes.windll",
+                mock_windll,
+                create=True,
+            ),
             patch.dict(
                 "sys.modules",
                 {
@@ -179,7 +194,10 @@ class TestTypingInject:
         typing_injector: WindowsTextInjector,
         mock_user32: MagicMock,
     ) -> None:
-        with patch("voice_dictation.injection.windows_injector.ctypes.windll") as windll_mock:
+        with patch(
+            "voice_dictation.injection.windows_injector.ctypes.windll",
+            create=True,
+        ) as windll_mock:
             windll_mock.user32.SendInput = mock_user32.SendInput
             typing_injector.inject("ab")
         assert mock_user32.SendInput.call_count == 1
@@ -192,7 +210,10 @@ class TestTypingInject:
         typing_injector: WindowsTextInjector,
         mock_user32: MagicMock,
     ) -> None:
-        with patch("voice_dictation.injection.windows_injector.ctypes.windll") as windll_mock:
+        with patch(
+            "voice_dictation.injection.windows_injector.ctypes.windll",
+            create=True,
+        ) as windll_mock:
             windll_mock.user32.SendInput = mock_user32.SendInput
             typing_injector.inject("Привет")
         assert mock_user32.SendInput.call_count == 1
@@ -206,7 +227,10 @@ class TestTypingInject:
         mock_user32: MagicMock,
     ) -> None:
         text = "line1\nline2"
-        with patch("voice_dictation.injection.windows_injector.ctypes.windll") as windll_mock:
+        with patch(
+            "voice_dictation.injection.windows_injector.ctypes.windll",
+            create=True,
+        ) as windll_mock:
             windll_mock.user32.SendInput = mock_user32.SendInput
             typing_injector.inject(text)
         args = mock_user32.SendInput.call_args
@@ -233,7 +257,10 @@ class TestEdgeCases:
     ) -> None:
         mock_user32.SendInput.return_value = 0
         with (
-            patch("voice_dictation.injection.windows_injector.ctypes.windll") as windll_mock,
+            patch(
+                "voice_dictation.injection.windows_injector.ctypes.windll",
+                create=True,
+            ) as windll_mock,
             pytest.raises(InjectionError),
         ):
             windll_mock.user32.SendInput = mock_user32.SendInput
@@ -245,6 +272,9 @@ class TestEdgeCases:
         mock_user32: MagicMock,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        with patch("voice_dictation.injection.windows_injector.ctypes.windll") as windll_mock:
+        with patch(
+            "voice_dictation.injection.windows_injector.ctypes.windll",
+            create=True,
+        ) as windll_mock:
             windll_mock.user32.SendInput = mock_user32.SendInput
             typing_injector.inject("test")

@@ -42,7 +42,7 @@ class TestClipboardInject:
         mock_cm = MagicMock()
         injector._clipboard = mock_cm
         with (
-            patch.object(MacOSTextInjector, "_write_clipboard") as mock_write,
+            patch.object(MacOSTextInjector, "_write_clipboard"),
             patch.object(MacOSTextInjector, "_simulate_cmd_v"),
             patch.dict("sys.modules", {"Quartz": mock_quartz}),
         ):
@@ -191,7 +191,10 @@ class TestEdgeCases:
             typing_injector.inject("a")
 
     def test_inject_logs_operation(
-        self, typing_injector: MacOSTextInjector, mock_quartz: MagicMock, caplog: pytest.LogCaptureFixture
+        self,
+        typing_injector: MacOSTextInjector,
+        mock_quartz: MagicMock,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         with patch.dict("sys.modules", {"Quartz": mock_quartz}):
             typing_injector.inject("test")
