@@ -129,7 +129,16 @@ chmod +x scripts/build_macos.sh
 
 Результат:
 - `dist/Voice Dictation.app` — приложение macOS (без иконки в Dock, только в трее)
-- `dist/voice-dictation.dmg` — образ диска для распространения (если доступен `hdiutil`)
+
+Создание DMG-образа (опционально, требуется `hdiutil`):
+```bash
+hdiutil create -volname "Voice Dictation" \
+  -srcfolder "dist/Voice Dictation.app" \
+  -ov -format UDZO "dist/voice-dictation.dmg"
+```
+
+> Скрипт `build_macos.sh` автоматически создаёт DMG, если `hdiutil` доступен.
+> Если DMG не появился — выполните команду вручную (см. выше).
 
 Установка:
 1. Откройте `.dmg` (или скопируйте `.app`)
