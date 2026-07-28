@@ -389,3 +389,106 @@ class TestClipboardWindows:
             cm._saved_clipboard_available = True
             cm.restore()
             mock_clip.SetClipboardData.assert_called_once_with(13, "win restore")
+
+
+class TestBinaryClipboardData:
+    """Non-UTF-8 binary data in clipboard is handled gracefully."""
+
+    def test_binary_clipboard_data_returns_empty_string(self) -> None:
+        cm = ClipboardManager()
+        p_mac, p_win = macos_patches()
+        with (
+            p_mac,
+            p_win,
+            patch(
+                "voice_dictation.utils.clipboard.subprocess.run",
+                return_value=subprocess.CompletedProcess(
+                    args=[], returncode=0, stdout=b'\x89PNG\r\n\x1a\n', stderr=b""
+                ),
+            ),
+        ):
+            cm.save()
+            assert cm._saved_text == ""
+            assert cm._saved_clipboard_available is True
+
+
+class TestWriteClipboardMacosEnv:
+    """_write_clipboard_macos passes LANG env and UTF-8 encoding."""
+
+    def test_write_clipboard_macos_env_and_encoding(self) -> None:
+        mock_proc = MagicMock()
+        mock_proc.communicate.return_value = (None, None)
+        mock_proc.returncode = 0
+        with patch(
+            "voice_dictation.utils.clipboard.subprocess.Popen",
+            return_value=mock_proc,
+        ) as mock_popen:
+            ClipboardManager._write_clipboard_macos("текст")
+        env_arg = mock_popen.call_args.kwargs["env"]
+        assert env_arg["LANG"] == "en_US.UTF-8"
+        input_data = mock_proc.communicate.call_args.kwargs["input"]
+        assert input_data == "текст".encode("utf-8")
+
+
+class TestLinuxClipboard:
+    """Linux clipboard read/write path."""
+
+    def test_save_clipboard_linux(self) -> None:
+        cm = ClipboardManager()
+        with (
+            patch("voice_dictation.utils.clipboard.is_macos", return_value=False),
+            patch("voice_dictation.utils.clipboard.is_windows", return_value=False),
+            patch(
+                "voice_dictation.utils.clipboard.subprocess.run",
+                return_value=subprocess.CompletedProcess(
+                    args=[], returncode=0, stdout="linux text", stderr=""
+                ),
+            ),
+        ):
+            cm.save()
+            assert cm._saved_text == "linux text"
+            assert cm._saved_clipboard_available is True
+
+    def test_restore_clipboard_linux(self) -> None:
+        cm = ClipboardManager()
+        cm._saved_text = "linux restore"
+        cm._saved_clipboard_available = True
+        with (
+            patch("voice_dictation.utils.clipboard.is_macos", return_value=False),
+            patch("voice_dictation.utils.clipboard.is_windows", return_value=False),
+            patch(
+                "voice_dictation.utils.clipboard.subprocess.run",
+                return_value=subprocess.CompletedProcess(
+                    args=[], returncode=0, stdout="", stderr=""
+                ),
+            ) as mock_run,
+        ):
+            cm.restore()
+            mock_run.assert_called_once()
+            assert "xclip" in mock_run.call_args.args[0]
+
+
+class TestSaveToFileFallback:
+    """_save_to_file_fallback writes to the expected path."""
+
+    def test_save_to_file_fallback(self, tmp_path) -> None:
+        cm = ClipboardManager()
+        cm._saved_text = "fallback content"
+        cm._saved_clipboard_available = True
+        with patch("voice_dictation.utils.clipboard.Path.home", return_value=tmp_path):
+            cm._save_to_file_fallback()
+        fallback_file = (
+            tmp_path / ".voice-dictation" / "clipboard_backup" / "clipboard_backup.txt"
+        )
+        assert fallback_file.exists()
+        assert fallback_file.read_text(encoding="utf-8") == "fallback content"
+
+
+class TestClearClipboard:
+    """_clear_clipboard writes empty string."""
+
+    def test_clear_clipboard_writes_empty_string(self) -> None:
+        cm = ClipboardManager()
+        with patch.object(cm, "_write_clipboard") as mock_write:
+            cm._clear_clipboard()
+            mock_write.assert_called_once_with("")

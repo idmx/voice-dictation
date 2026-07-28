@@ -456,20 +456,32 @@ class TestInjectionPreservesPipelineState:
 
         pipeline.start()
 
+        # --- First cycle: injection fails, state must return to IDLE ---
         listener.simulate_press()
         listener.simulate_release()
         assert _wait_for_state(sm, State.IDLE, timeout=5.0)
 
+        # Wait until the injector has actually been called
         deadline = time.monotonic() + 3.0
         while injector._inject_count < 1 and time.monotonic() < deadline:
             time.sleep(0.01)
         assert injector._inject_count >= 1
+
+        # Ensure the worker thread has fully finished — including the
+        # _handle_error/force_idle call that runs AFTER _inject's finally
+        # block transitions to IDLE.  Without this, a late force_idle()
+        # can clobber the RECORDING state of the next cycle.
+        pipeline._executor.submit(lambda: None).result(timeout=5.0)
+
         assert len(injector.injected_texts) == 0
 
+        # --- Second cycle: injection succeeds, text is injected ---
         listener.simulate_press()
         assert sm.state == State.RECORDING
         listener.simulate_release()
         assert _wait_for_state(sm, State.IDLE, timeout=5.0)
+
+        pipeline._executor.submit(lambda: None).result(timeout=5.0)
 
         assert injector.injected_texts == ["Текст"]
         pipeline.stop()

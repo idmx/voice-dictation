@@ -212,3 +212,122 @@ class TestEdgeCases:
     ) -> None:
         with patch.dict("sys.modules", {"Quartz": mock_quartz}):
             typing_injector.inject("test")
+
+
+class TestSimulateCmdVFallback:
+    """CGEvent fallback when osascript fails."""
+
+    def test_cgevent_fallback_when_osascript_returns_nonzero(
+        self, mock_quartz: MagicMock
+    ) -> None:
+        with patch.dict("sys.modules", {"Quartz": mock_quartz}):
+            injector = MacOSTextInjector(method="clipboard", paste_delay=0)
+        with (
+            patch(
+                "voice_dictation.injection.macos_injector.subprocess.run",
+                return_value=make_completed_process(returncode=1),
+            ),
+            patch.object(
+                MacOSTextInjector, "_post_cmd_v_on_main_thread"
+            ) as mock_post,
+        ):
+            result = injector._simulate_cmd_v()
+            mock_post.assert_called_once()
+            assert result is False
+
+
+class TestSimulateCmdVOsascriptNotFound:
+    """CGEvent fallback when osascript not found."""
+
+    def test_cgevent_fallback_when_osascript_not_found(
+        self, mock_quartz: MagicMock
+    ) -> None:
+        with patch.dict("sys.modules", {"Quartz": mock_quartz}):
+            injector = MacOSTextInjector(method="clipboard", paste_delay=0)
+        with (
+            patch(
+                "voice_dictation.injection.macos_injector.subprocess.run",
+                side_effect=FileNotFoundError("osascript not found"),
+            ),
+            patch.object(
+                MacOSTextInjector, "_post_cmd_v_on_main_thread"
+            ) as mock_post,
+        ):
+            injector._simulate_cmd_v()
+            mock_post.assert_called_once()
+
+
+class TestSimulateCmdVTimeout:
+    """CGEvent fallback when osascript times out."""
+
+    def test_cgevent_fallback_when_osascript_times_out(
+        self, mock_quartz: MagicMock
+    ) -> None:
+        with patch.dict("sys.modules", {"Quartz": mock_quartz}):
+            injector = MacOSTextInjector(method="clipboard", paste_delay=0)
+        with (
+            patch(
+                "voice_dictation.injection.macos_injector.subprocess.run",
+                side_effect=subprocess.TimeoutExpired(cmd=["osascript"], timeout=5),
+            ),
+            patch.object(
+                MacOSTextInjector, "_post_cmd_v_on_main_thread"
+            ) as mock_post,
+        ):
+            injector._simulate_cmd_v()
+            mock_post.assert_called_once()
+
+
+class TestWriteClipboardEnv:
+    """_write_clipboard passes LANG env and UTF-8 encoding."""
+
+    def test_write_clipboard_env_and_encoding(self) -> None:
+        mock_proc = MagicMock()
+        mock_proc.communicate.return_value = (None, None)
+        mock_proc.returncode = 0
+        with patch(
+            "voice_dictation.injection.macos_injector.subprocess.Popen",
+            return_value=mock_proc,
+        ) as mock_popen:
+            MacOSTextInjector._write_clipboard("текст")
+        env_arg = mock_popen.call_args.kwargs["env"]
+        assert env_arg["LANG"] == "en_US.UTF-8"
+        input_data = mock_proc.communicate.call_args.kwargs["input"]
+        assert input_data == "текст".encode("utf-8")
+
+
+class TestPasteFailureNoRestore:
+    """When paste fails, clipboard is NOT restored."""
+
+    def test_paste_failure_does_not_restore_clipboard(
+        self, mock_quartz: MagicMock
+    ) -> None:
+        with patch.dict("sys.modules", {"Quartz": mock_quartz}):
+            injector = MacOSTextInjector(method="clipboard", paste_delay=0)
+        mock_cm = MagicMock()
+        injector._clipboard = mock_cm
+        with (
+            patch.object(MacOSTextInjector, "_write_clipboard"),
+            patch.object(MacOSTextInjector, "_simulate_cmd_v", return_value=False),
+            patch.dict("sys.modules", {"Quartz": mock_quartz}),
+        ):
+            injector.inject("text")
+        mock_cm.save.assert_called_once()
+        mock_cm.restore.assert_not_called()
+
+
+class TestCheckAccessibilityOnce:
+    """_check_accessibility_once logs warning only once."""
+
+    def test_check_accessibility_once_called_only_once(
+        self, mock_quartz: MagicMock
+    ) -> None:
+        with patch.dict("sys.modules", {"Quartz": mock_quartz}):
+            injector = MacOSTextInjector(method="clipboard", paste_delay=0)
+        with patch(
+            "voice_dictation.injection.macos_injector._check_ax_enabled",
+            return_value=False,
+        ) as mock_check:
+            injector._check_accessibility_once()
+            injector._check_accessibility_once()
+            mock_check.assert_called_once()
