@@ -106,7 +106,21 @@ class WhisperEngine(RecognitionEngine):
     def unload(self) -> None:
         with self._load_lock:
             if self._model is not None:
+                # Explicitly delete the model to free memory (including GPU/CUDA).
+                # Simply setting to None may not release CTranslate2's internal
+                # caches and CUDA allocations.
+                try:
+                    del self._model
+                except Exception:
+                    pass
                 self._model = None
+                # Attempt to release CUDA memory if torch is available
+                try:
+                    import torch
+                    if torch.cuda.is_available():
+                        torch.cuda.empty_cache()
+                except ImportError:
+                    pass
                 logger.info(f"Model '{self._model_size}' unloaded")
 
     def reload(self, model_size: str) -> None:

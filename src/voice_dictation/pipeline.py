@@ -232,9 +232,24 @@ class DictationPipeline:
     # ------------------------------------------------------------------
 
     def _handle_error(self, error: Exception, context: str) -> None:
-        """Handle pipeline errors gracefully: log, force idle, notify."""
+        """Handle pipeline errors gracefully: log, force idle, notify.
+
+        Safe to call under _pipeline_lock — error callbacks are deferred
+        to avoid holding the lock while user code runs.
+        """
         logger.error(f"Pipeline error ({context}): {error}")
         self._state_machine.force_idle()
+        # Defer error callbacks — they may be slow or block, and we
+        # might be holding _pipeline_lock when _handle_error is called.
+        if self._error_callbacks:
+            try:
+                self._executor.submit(self._fire_error_callbacks, error, context)
+            except RuntimeError:
+                # Executor may be shut down — call directly
+                self._fire_error_callbacks(error, context)
+
+    def _fire_error_callbacks(self, error: Exception, context: str) -> None:
+        """Invoke registered error callbacks (runs in worker thread)."""
         for cb in self._error_callbacks:
             try:
                 cb(error, context)

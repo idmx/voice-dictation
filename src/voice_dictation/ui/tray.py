@@ -51,6 +51,7 @@ class TrayIcon:
         self._thread: threading.Thread | None = None
         self._model_loading = False
         self._loading_status: str | None = None
+        self._icon_cache: dict[str, Image.Image] = {}
 
     def start(self) -> None:
         """Start the tray icon in a background thread."""
@@ -155,12 +156,19 @@ class TrayIcon:
                 pass
 
     def _load_icon(self, name: str) -> Image.Image:
-        """Load an icon image from assets/icons/."""
+        """Load an icon image, with caching to avoid repeated file I/O."""
+        # Return cached icon if available
+        if name in self._icon_cache:
+            return self._icon_cache[name]
+
         for suffix in (".png", "_circle.png"):
             path = ICONS_DIR / f"{name}{suffix}"
             if path.exists():
                 try:
-                    return Image.open(path)
+                    img = Image.open(path)
+                    img.load()  # Force-load pixel data so file handle is released
+                    self._icon_cache[name] = img
+                    return img
                 except Exception as exc:
                     logger.debug(f"Failed to load icon {path}: {exc}")
 
@@ -169,11 +177,16 @@ class TrayIcon:
             path = pkg_icons / f"{name}{suffix}"
             if path.exists():
                 try:
-                    return Image.open(path)
+                    img = Image.open(path)
+                    img.load()  # Force-load pixel data so file handle is released
+                    self._icon_cache[name] = img
+                    return img
                 except Exception as exc:
                     logger.debug(f"Failed to load icon {path}: {exc}")
 
-        return self._generate_fallback_icon(name)
+        img = self._generate_fallback_icon(name)
+        self._icon_cache[name] = img
+        return img
 
     @staticmethod
     def _generate_fallback_icon(name: str) -> Image.Image:
@@ -300,11 +313,19 @@ class TrayIcon:
             import sys
 
             if sys.platform == "darwin":
-                subprocess.Popen(["open", str(config_path)])
+                subprocess.Popen(
+                    ["open", str(config_path)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
             elif sys.platform == "win32":
                 os.startfile(str(config_path))
             else:
-                subprocess.Popen(["xdg-open", str(config_path)])
+                subprocess.Popen(
+                    ["xdg-open", str(config_path)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
         except Exception as exc:
             logger.error(f"Failed to open settings: {exc}")
 
