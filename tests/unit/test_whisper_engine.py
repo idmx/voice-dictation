@@ -296,3 +296,42 @@ class TestThreadSafety:
             t.join()
         assert len(errors) == 0
         assert len(results) == 5
+
+
+class TestSetBeamSize:
+    def test_set_beam_size_valid_values(self, engine):
+        """set_beam_size accepts 1, 3, 5 and updates internal state."""
+        assert engine._beam_size == 5  # default
+        engine.set_beam_size(1)
+        assert engine._beam_size == 1
+        engine.set_beam_size(3)
+        assert engine._beam_size == 3
+        engine.set_beam_size(5)
+        assert engine._beam_size == 5
+
+    def test_set_beam_size_ignores_invalid(self, engine):
+        """set_beam_size ignores unsupported values."""
+        engine.set_beam_size(1)
+        engine.set_beam_size(7)  # invalid — should be ignored
+        assert engine._beam_size == 1
+        engine.set_beam_size(0)  # invalid
+        assert engine._beam_size == 1
+
+    @patch.object(WhisperEngine, "load")
+    def test_beam_size_passed_to_transcribe(self, mock_load, engine, sample_audio_int16):
+        """beam_size is forwarded to model.transcribe()."""
+        mock_model = MagicMock()
+        segment = MagicMock()
+        segment.text = "test"
+        mock_model.transcribe.return_value = ([segment], MagicMock())
+        engine._model = mock_model
+
+        engine.set_beam_size(1)
+        engine.transcribe(sample_audio_int16)
+        call_kwargs = mock_model.transcribe.call_args
+        assert call_kwargs[1]["beam_size"] == 1
+
+        engine.set_beam_size(3)
+        engine.transcribe(sample_audio_int16)
+        call_kwargs = mock_model.transcribe.call_args
+        assert call_kwargs[1]["beam_size"] == 3

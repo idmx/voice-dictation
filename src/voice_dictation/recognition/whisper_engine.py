@@ -26,12 +26,14 @@ class WhisperEngine(RecognitionEngine):
         language: str = "ru",
         initial_prompt: str = "",
         model_cache_dir: str | None = None,
+        beam_size: int = 5,
     ) -> None:
         self._model_size = model_size
         self._device = device
         self._compute_type = compute_type
         self._language = language
         self._initial_prompt = initial_prompt
+        self._beam_size = beam_size
         self._model = None
         self._model_manager = ModelManager(cache_dir=model_cache_dir)
         self._load_lock = threading.Lock()
@@ -43,6 +45,14 @@ class WhisperEngine(RecognitionEngine):
     def set_progress_callback(self, callback: Callable[[int], None]) -> None:
         """Set a callback for download progress reporting (0-100%)."""
         self._progress_callback = callback
+
+    def set_beam_size(self, beam_size: int) -> None:
+        """Update beam size for future transcriptions without reloading the model."""
+        if beam_size not in (1, 3, 5):
+            logger.warning(f"Unsupported beam_size={beam_size}, ignoring")
+            return
+        self._beam_size = beam_size
+        logger.info(f"Beam size set to {beam_size}")
 
     def _load_model(self) -> None:
         if self._model is not None:
@@ -167,7 +177,7 @@ class WhisperEngine(RecognitionEngine):
         try:
             segments, _info = self._model.transcribe(
                 audio_float32,
-                beam_size=5,
+                beam_size=self._beam_size,
                 language=lang,
                 initial_prompt=self._initial_prompt if self._initial_prompt else None,
                 vad_filter=False,

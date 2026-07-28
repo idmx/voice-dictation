@@ -172,6 +172,7 @@ class Application:
                 language=self._config.language,
                 initial_prompt=self._config.initial_prompt,
                 model_cache_dir=self._config.model_cache_dir,
+                beam_size=self._config.beam_size,
             )
         except Exception as exc:
             logger.error(f"Failed to initialize recognition engine: {exc}")

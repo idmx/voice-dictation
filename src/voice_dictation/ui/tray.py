@@ -38,6 +38,12 @@ _STATE_TOOLTIP_MAP: dict[State, str] = {
 _AVAILABLE_MODELS = ("tiny", "base", "small", "medium")
 _AVAILABLE_LANGUAGES = ("ru", "en")
 _AVAILABLE_MODES = ("push_to_talk", "toggle")
+# beam_size menu: (label, value)
+_AVAILABLE_BEAM_SIZES: list[tuple[str, int]] = [
+    ("Быстро (1)", 1),
+    ("Баланс (3)", 3),
+    ("Точно (5)", 5),
+]
 
 
 class TrayIcon:
@@ -230,8 +236,8 @@ class TrayIcon:
                     *(
                         pystray.MenuItem(
                             m,
-                            lambda _, m=m: self._on_model_change(m),
-                            checked=lambda _, m=m: self._config.whisper_model == m,
+                            lambda *_, m=m: self._on_model_change(m),
+                            checked=lambda *_, m=m: self._config.whisper_model == m,
                             radio=True,
                         )
                         for m in _AVAILABLE_MODELS
@@ -244,8 +250,8 @@ class TrayIcon:
                     *(
                         pystray.MenuItem(
                             lang,
-                            lambda _, lng=lang: self._on_language_change(lng),
-                            checked=lambda _, lng=lang: self._config.language == lng,
+                            lambda *_, lng=lang: self._on_language_change(lng),
+                            checked=lambda *_, lng=lang: self._config.language == lng,
                             radio=True,
                         )
                         for lang in _AVAILABLE_LANGUAGES
@@ -258,11 +264,25 @@ class TrayIcon:
                     *(
                         pystray.MenuItem(
                             mode,
-                            lambda _, m=mode: self._on_mode_change(m),
-                            checked=lambda _, m=mode: self._config.mode == m,
+                            lambda *_, m=mode: self._on_mode_change(m),
+                            checked=lambda *_, m=mode: self._config.mode == m,
                             radio=True,
                         )
                         for mode in _AVAILABLE_MODES
+                    )
+                ),
+            ),
+            pystray.MenuItem(
+                "Качество",
+                pystray.Menu(
+                    *(
+                        pystray.MenuItem(
+                            label,
+                            lambda *_, v=val: self._on_beam_size_change(v),
+                            checked=lambda *_, v=val: self._config.beam_size == v,
+                            radio=True,
+                        )
+                        for label, val in _AVAILABLE_BEAM_SIZES
                     )
                 ),
             ),
@@ -412,6 +432,23 @@ class TrayIcon:
             logger.info(f"Mode changed to '{mode}'")
         except Exception as exc:
             logger.error(f"Failed to change mode: {exc}")
+
+    def _on_beam_size_change(self, beam_size: int) -> None:
+        """Handle beam size menu change — updates without reloading model."""
+        try:
+            self._config = self._config.model_copy(update={"beam_size": beam_size})
+            if self._app:
+                self._app._config = self._config
+                # Update the engine's beam_size without model reload
+                if self._app._recognition_engine is not None:
+                    self._app._recognition_engine.set_beam_size(beam_size)
+                # Update pipeline config so it propagates the new value
+                if self._app._pipeline is not None:
+                    self._app._pipeline.config = self._config
+            self._persist_and_refresh_menu()
+            logger.info(f"Beam size changed to {beam_size}")
+        except Exception as exc:
+            logger.error(f"Failed to change beam size: {exc}")
 
     def _on_auto_punctuation_toggle(self) -> None:
         """Toggle auto-punctuation on/off."""
