@@ -94,6 +94,11 @@ if sys.platform == 'darwin':
         info_plist={
             'LSUIElement': True,  # No Dock icon, tray only
             'NSMicrophoneUsageDescription': 'Voice Dictation needs microphone access to transcribe your speech.',
+            'NSAppleEventsUsageDescription': 'Voice Dictation uses AppleScript to simulate Cmd+V paste into the active text field.',
+            'LSEnvironment': {
+                'LANG': 'en_US.UTF-8',
+                'LC_ALL': 'en_US.UTF-8',
+            },
             'CFBundleName': 'Voice Dictation',
             'CFBundleShortVersionString': '0.1.0',
             'CFBundleVersion': '1',

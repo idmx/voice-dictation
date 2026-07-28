@@ -22,18 +22,29 @@ _KCGHIDEVENTTAP = 0
 _PASTE_SETTLE_DELAY = 0.5
 
 
-def _check_ax_enabled() -> bool:
+def _check_ax_enabled(prompt: bool = False) -> bool:
     """Check if the app has Accessibility permissions on macOS.
 
-    Uses AXIsProcessTrusted() which returns True only when the calling
-    process has been granted Accessibility access.
+    Uses ``AXIsProcessTrustedWithOptions`` which returns True only when
+    the calling process has been granted Accessibility access.
+
+    When *prompt* is True, the system displays a dialog asking the user
+    to grant Accessibility permission (if not already granted).  This
+    is the standard way to request permission on macOS.
     """
     try:
-        from ApplicationServices import AXIsProcessTrusted
+        from ApplicationServices import AXIsProcessTrustedWithOptions
+        from CoreFoundation import kCFPreferencesCurrentUser
 
-        return AXIsProcessTrusted()
+        options = {"AXTrustedCheckOptionPrompt": prompt}
+        return AXIsProcessTrustedWithOptions(options)
     except Exception:
-        return False
+        try:
+            from ApplicationServices import AXIsProcessTrusted
+
+            return AXIsProcessTrusted()
+        except Exception:
+            return False
 
 
 class MacOSTextInjector(TextInjector):
@@ -68,11 +79,17 @@ class MacOSTextInjector(TextInjector):
             raise InjectionError(f"Text injection failed: {exc}") from exc
 
     def _check_accessibility_once(self) -> None:
-        """Log a one-time warning if Accessibility is not granted."""
+        """Check Accessibility permission (one-time, with system prompt).
+
+        On first call, triggers the macOS system dialog asking the user
+        to grant Accessibility permission.  Subsequent calls are no-ops.
+        """
         if self._ax_checked:
             return
         self._ax_checked = True
-        self._ax_enabled = _check_ax_enabled()
+        # prompt=True shows the system "Open System Settings" dialog
+        # if permission hasn't been granted yet.
+        self._ax_enabled = _check_ax_enabled(prompt=True)
         if self._ax_enabled:
             logger.info("Accessibility permissions: granted")
         else:
@@ -129,13 +146,19 @@ class MacOSTextInjector(TextInjector):
     def _simulate_cmd_v(self) -> bool:
         """Simulate Cmd+V paste.
 
-        Tries AppleScript first, then CGEvent fallback.
-        CGEvent is dispatched to the main thread via dispatch_async,
-        because CGEventPost from a background thread may not be delivered
-        to the focused application on macOS.
+        Tries multiple methods in order:
+        1. NSAppleScript (in-process, no subprocess overhead)
+        2. osascript subprocess (fallback)
+        3. CGEvent on main thread (requires Accessibility)
+
         Returns True if paste likely succeeded, False otherwise.
         """
-        # Try AppleScript (requires Accessibility for osascript)
+        # Method 1: NSAppleScript in-process (fastest, no subprocess)
+        if self._try_nsapplescript_cmd_v():
+            logger.info("Simulated Cmd+V via NSAppleScript")
+            return True
+
+        # Method 2: osascript subprocess
         # Use "key code 9" instead of keystroke "v" to avoid layout issues:
         # keystroke "v" sends the letter v from the CURRENT keyboard layout,
         # which is "м" in Russian layout — resulting in Cmd+М instead of Cmd+V.
@@ -152,26 +175,55 @@ class MacOSTextInjector(TextInjector):
                 timeout=5,
             )
             if result.returncode == 0:
-                logger.info("Simulated Cmd+V via AppleScript")
+                logger.info("Simulated Cmd+V via osascript")
                 return True
-            logger.debug(
-                f"AppleScript Cmd+V failed (rc={result.returncode}): "
+            logger.warning(
+                f"osascript Cmd+V failed (rc={result.returncode}): "
                 f"{result.stderr.strip()}"
             )
         except FileNotFoundError:
-            logger.debug("osascript not found, falling back to CGEvent")
+            logger.warning("osascript not found, falling back to CGEvent")
         except subprocess.TimeoutExpired:
-            logger.debug("osascript timed out, falling back to CGEvent")
+            logger.warning("osascript timed out, falling back to CGEvent")
         except Exception as exc:
-            logger.debug(f"AppleScript Cmd+V error: {exc}, falling back to CGEvent")
+            logger.warning(f"osascript Cmd+V error: {exc}, falling back to CGEvent")
 
-        # Fallback: CGEvent on the main thread (requires Accessibility)
+        # Method 3: CGEvent on the main thread (requires Accessibility)
         try:
             self._post_cmd_v_on_main_thread()
             logger.info("Simulated Cmd+V via CGEvent on main thread")
             return self._ax_enabled
         except Exception as exc:
             logger.error(f"CGEvent Cmd+V also failed: {exc}")
+            return False
+
+    @staticmethod
+    def _try_nsapplescript_cmd_v() -> bool:
+        """Try Cmd+V via NSAppleScript (in-process, no subprocess).
+
+        This is faster than spawning an osascript subprocess and doesn't
+        require Automation permission for a separate process — it runs
+        in the app's own process context.
+        """
+        try:
+            from Foundation import NSAppleScript, NSMutableDictionary
+
+            script = NSAppleScript.alloc().initWithSource_(
+                'tell application "System Events" to key code 9 using command down'
+            )
+            error_info = NSMutableDictionary.alloc().init()
+            script.executeAndReturnError_(error_info)
+
+            # Check for errors
+            if error_info.count() > 0:
+                error_msg = error_info.objectForKey_("NSAppleScriptErrorMessage")
+                if error_msg:
+                    logger.debug(f"NSAppleScript error: {error_msg}")
+                    return False
+                return True
+            return True
+        except Exception as exc:
+            logger.debug(f"NSAppleScript Cmd+V failed: {exc}")
             return False
 
     @staticmethod
