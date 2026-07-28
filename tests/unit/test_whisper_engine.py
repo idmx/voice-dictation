@@ -109,7 +109,7 @@ class TestTranscribe:
             engine.transcribe(sample_audio_int16)
 
     @patch.object(WhisperEngine, "load")
-    def test_vad_filter(self, mock_load, engine, sample_audio_int16):
+    def test_vad_filter_disabled(self, mock_load, engine, sample_audio_int16):
         mock_model = MagicMock()
         segment = MagicMock()
         segment.text = "test"
@@ -117,7 +117,7 @@ class TestTranscribe:
         engine._model = mock_model
         engine.transcribe(sample_audio_int16)
         call_kwargs = mock_model.transcribe.call_args
-        assert call_kwargs[1]["vad_filter"] is True
+        assert call_kwargs[1]["vad_filter"] is False
 
     @patch.object(WhisperEngine, "load")
     def test_transcribe_error(self, mock_load, engine, sample_audio_int16):

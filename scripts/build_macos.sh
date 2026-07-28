@@ -4,14 +4,31 @@ set -euo pipefail
 
 echo "Building Voice Dictation for macOS..."
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+cd "$PROJECT_DIR"
+
+# Use venv Python (has all project dependencies)
+if [ ! -d ".venv" ]; then
+    echo "Error: .venv not found. Run: python -m venv .venv && source .venv/bin/activate && pip install -e '.[dev]'"
+    exit 1
+fi
+
+PYTHON=".venv/bin/python"
+
+# Ensure pip is available in venv
+$PYTHON -m ensurepip --default-pip 2>/dev/null || true
+
+# Install PyInstaller into venv
+echo "Installing PyInstaller into venv..."
+$PYTHON -m pip install --quiet "pyinstaller>=6.0"
+
 # Clean previous builds
-rm -rf build/ dist/
+rm -rf build dist
 
-# Install PyInstaller if needed
-pip install pyinstaller>=6.0
-
-# Build
-pyinstaller voice_dictation.spec --noconfirm
+# Build with venv Python (includes all dependencies)
+echo "Running PyInstaller..."
+$PYTHON -m PyInstaller voice_dictation.spec --noconfirm
 
 # Check output
 if [ -d "dist/voice-dictation" ]; then

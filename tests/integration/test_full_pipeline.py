@@ -203,7 +203,7 @@ def ptt_components():
     sm = StateMachine()
     tracker = _StateTracker()
     sm.on_transition(tracker)
-    cfg = AppConfig(mode="push_to_talk", hotkey="cmd+shift+d", language="ru")
+    cfg = AppConfig(mode="push_to_talk", hotkey="cmd+shift+1", language="ru")
     pipeline = DictationPipeline(
         state_machine=sm,
         audio_capture=audio,
@@ -224,7 +224,7 @@ def toggle_components():
     sm = StateMachine()
     tracker = _StateTracker()
     sm.on_transition(tracker)
-    cfg = AppConfig(mode="toggle", hotkey="cmd+shift+d", language="ru")
+    cfg = AppConfig(mode="toggle", hotkey="cmd+shift+1", language="ru")
     pipeline = DictationPipeline(
         state_machine=sm,
         audio_capture=audio,

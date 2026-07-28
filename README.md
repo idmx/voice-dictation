@@ -3,6 +3,7 @@
 Офлайн-инструмент голосового ввода с активацией по глобальной горячей клавише. Нажмите комбинацию клавиш — говорите — текст появится в активном поле.
 
 **Особенности:**
+
 - Полностью офлайн — распознавание через [faster-whisper](https://github.com/SYSTRAN/faster-whisper), данные не покидают компьютер
 - Глобальные горячие клавиши — работает поверх любого приложения
 - Два режима: **Push-to-talk** (удержание) и **Toggle** (нажал/отпустил)
@@ -17,6 +18,7 @@
 ### Первый запуск
 
 При первом запуске приложение:
+
 1. Создаст конфигурацию по умолчанию в `~/.voice-dictation/config.toml`
 2. Скачает модель Whisper (по умолчанию `base`, ~145 МБ) в `~/.voice-dictation/models/`
 3. Проверит права доступа (микрофон, Accessibility на macOS)
@@ -25,16 +27,16 @@
 
 1. Запустите приложение — иконка появится в системном трее
 2. Установите фокус в текстовое поле (браузер, редактор, мессенджер)
-3. Нажмите и удерживайте **Cmd+Shift+D** (macOS) / **Win+Shift+D** (Windows)
+3. Нажмите и удерживайте **Cmd+Shift+1** (macOS) / **Win+Shift+1** (Windows)
 4. Говорите
 5. Отпустите клавишу — текст появится в поле
 
 ### Режимы активации
 
-| Режим | Описание |
-|---|---|
-| **push_to_talk** (по умолчанию) | Запись пока клавиша удерживается, распознавание при отпускании |
-| **toggle** | Первое нажатие — старт записи, повторное — стоп и распознавание |
+| Режим                           | Описание                                                        |
+| ------------------------------- | --------------------------------------------------------------- |
+| **push_to_talk** (по умолчанию) | Запись пока клавиша удерживается, распознавание при отпускании  |
+| **toggle**                      | Первое нажатие — старт записи, повторное — стоп и распознавание |
 
 ### Меню трея
 
@@ -52,7 +54,7 @@
 Файл: `~/.voice-dictation/config.toml`. Изменения подхватываются без перезапуска.
 
 ```toml
-hotkey = "cmd+shift+d"          # Комбинация клавиш
+hotkey = "cmd+shift+1"          # Комбинация клавиш
 mode = "push_to_talk"           # push_to_talk | toggle
 whisper_model = "base"          # tiny | base | small
 language = "ru"                 # Код языка (ru, en, de, fr, ...)
@@ -68,28 +70,30 @@ log_level = "INFO"              # DEBUG | INFO | WARNING | ERROR
 
 ### Модели Whisper
 
-| Модель | Размер | RAM | Скорость (CPU) | Качество русского |
-|---|---|---|---|---|
-| `tiny` | ~75 МБ | ~1 ГБ | Очень быстро | Базовое |
-| `base` | ~145 МБ | ~1 ГБ | Быстро | Хорошее |
-| `small` | ~480 МБ | ~2 ГБ | Средне | Отличное |
+| Модель  | Размер  | RAM   | Скорость (CPU) | Качество русского |
+| ------- | ------- | ----- | -------------- | ----------------- |
+| `tiny`  | ~75 МБ  | ~1 ГБ | Очень быстро   | Базовое           |
+| `base`  | ~145 МБ | ~1 ГБ | Быстро         | Хорошее           |
+| `small` | ~480 МБ | ~2 ГБ | Средне         | Отличное          |
 
 Рекомендация: `base` — оптимальный баланс для русского языка.
 
 ### Способы вставки текста
 
-| Метод | Как работает | Плюсы | Минусы |
-|---|---|---|---|
-| `clipboard` (по умолчанию) | Копирует текст в буфер, симулирует Cmd+V / Ctrl+V | Быстро, работает везде | Временно заменяет содержимое буфера |
-| `typing` | Симулирует посимвольный ввод | Не трогает буфер обмена | Медленнее для длинного текста |
+| Метод                      | Как работает                                      | Плюсы                   | Минусы                              |
+| -------------------------- | ------------------------------------------------- | ----------------------- | ----------------------------------- |
+| `clipboard` (по умолчанию) | Копирует текст в буфер, симулирует Cmd+V / Ctrl+V | Быстро, работает везде  | Временно заменяет содержимое буфера |
+| `typing`                   | Симулирует посимвольный ввод                      | Не трогает буфер обмена | Медленнее для длинного текста       |
 
 ### Права доступа
 
 **macOS:**
+
 - **Accessibility** — требуется для глобального перехвата клавиш и симуляции ввода. Система → Конфиденциальность → Универсальный доступ
 - **Микрофон** — запрашивается автоматически при первом запуске
 
 **Windows:**
+
 - **Микрофон** — запрашивается системой
 
 ---
@@ -113,6 +117,7 @@ pip install .
 ```
 
 Запуск:
+
 ```bash
 voice-dictation
 # или
@@ -128,9 +133,11 @@ chmod +x scripts/build_macos.sh
 ```
 
 Результат:
+
 - `dist/Voice Dictation.app` — приложение macOS (без иконки в Dock, только в трее)
 
 Создание DMG-образа (опционально, требуется `hdiutil`):
+
 ```bash
 hdiutil create -volname "Voice Dictation" \
   -srcfolder "dist/Voice Dictation.app" \
@@ -141,6 +148,7 @@ hdiutil create -volname "Voice Dictation" \
 > Если DMG не появился — выполните команду вручную (см. выше).
 
 Установка:
+
 1. Откройте `.dmg` (или скопируйте `.app`)
 2. Перетащите `Voice Dictation.app` в `/Applications/`
 3. При первом запуске: ПКМ → Открыть (обход Gatekeeper для неподписанного приложения)
@@ -154,9 +162,11 @@ powershell -ExecutionPolicy Bypass -File scripts\build_windows.ps1
 ```
 
 Результат:
+
 - `dist\voice-dictation\voice-dictation.exe` — исполняемый файл
 
 Установка:
+
 1. Скопируйте папку `dist\voice-dictation\` в `C:\Program Files\Voice Dictation\`
 2. Запустите `voice-dictation.exe`
 3. Предоставьте доступ к микрофону при запросе
@@ -164,6 +174,7 @@ powershell -ExecutionPolicy Bypass -File scripts\build_windows.ps1
 ### Автозапуск
 
 **macOS** — LaunchAgent:
+
 ```bash
 # Включить
 python -c "from voice_dictation.platform.autostart import AutoStartManager; AutoStartManager().enable()"
@@ -173,6 +184,7 @@ python -c "from voice_dictation.platform.autostart import AutoStartManager; Auto
 ```
 
 **Windows** — ключ в реестре (`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`):
+
 ```powershell
 python -c "from voice_dictation.platform.autostart import AutoStartManager; AutoStartManager().enable()"
 ```
@@ -287,15 +299,16 @@ pyinstaller voice_dictation.spec --noconfirm
 
 ### Маркеры тестов
 
-| Маркер | Назначение |
-|---|---|
-| `@pytest.mark.macos` | Требует macOS |
-| `@pytest.mark.windows` | Требует Windows |
-| `@pytest.mark.integration` | Интеграционный тест |
-| `@pytest.mark.system` | Системный E2E (реальное железо) |
-| `@pytest.mark.performance` | Бенчмарк |
+| Маркер                     | Назначение                      |
+| -------------------------- | ------------------------------- |
+| `@pytest.mark.macos`       | Требует macOS                   |
+| `@pytest.mark.windows`     | Требует Windows                 |
+| `@pytest.mark.integration` | Интеграционный тест             |
+| `@pytest.mark.system`      | Системный E2E (реальное железо) |
+| `@pytest.mark.performance` | Бенчмарк                        |
 
 Пропустить системные тесты в CI:
+
 ```bash
 pytest -m "not system and not performance"
 ```
@@ -303,6 +316,7 @@ pytest -m "not system and not performance"
 ### Конфигурация тестов
 
 Определена в `pyproject.toml`:
+
 ```toml
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -313,16 +327,16 @@ addopts = "--cov=voice_dictation --cov-report=term-missing"
 
 ## Технологический стек
 
-| Компонент | Библиотека |
-|---|---|
-| Распознавание речи | faster-whisper (CTranslate2) |
-| Захват аудио | sounddevice + numpy |
-| Глобальные хоткеи | pynput |
-| Вставка текста (macOS) | PyObjC (Quartz, AppKit) |
-| Вставка текста (Windows) | pywin32 / ctypes |
-| Системный трей | pystray + Pillow |
-| Конфигурация | Pydantic v2 + TOML |
-| Логирование | loguru |
+| Компонент                | Библиотека                   |
+| ------------------------ | ---------------------------- |
+| Распознавание речи       | faster-whisper (CTranslate2) |
+| Захват аудио             | sounddevice + numpy          |
+| Глобальные хоткеи        | pynput                       |
+| Вставка текста (macOS)   | PyObjC (Quartz, AppKit)      |
+| Вставка текста (Windows) | pywin32 / ctypes             |
+| Системный трей           | pystray + Pillow             |
+| Конфигурация             | Pydantic v2 + TOML           |
+| Логирование              | loguru                       |
 
 ## Лицензия
 

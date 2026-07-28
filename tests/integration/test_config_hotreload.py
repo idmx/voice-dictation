@@ -45,7 +45,7 @@ class TestHotkeyChangeApplied:
 
             assert len(received) >= 1
             old_cfg, new_cfg = received[0]
-            assert old_cfg.hotkey == "cmd+shift+d"
+            assert old_cfg.hotkey == "cmd+shift+1"
             assert new_cfg.hotkey == "ctrl+alt+f1"
         finally:
             manager.stop_watching()
@@ -67,7 +67,7 @@ class TestModelChangeTriggersReload:
         try:
             config_file = config_dir / "config.toml"
             config_file.write_text(
-                'hotkey = "cmd+shift+d"\n'
+                'hotkey = "cmd+shift+1"\n'
                 'language = "ru"\n'
                 'whisper_model = "small"\n'
                 'mode = "push_to_talk"\n'
@@ -110,7 +110,7 @@ class TestLanguageChangeApplied:
         try:
             config_file = config_dir / "config.toml"
             config_file.write_text(
-                'hotkey = "cmd+shift+d"\n'
+                'hotkey = "cmd+shift+1"\n'
                 'language = "de"\n'
                 'whisper_model = "base"\n'
                 'mode = "push_to_talk"\n'
@@ -153,7 +153,7 @@ class TestSoundToggleApplied:
         try:
             config_file = config_dir / "config.toml"
             config_file.write_text(
-                'hotkey = "cmd+shift+d"\n'
+                'hotkey = "cmd+shift+1"\n'
                 'language = "ru"\n'
                 'whisper_model = "base"\n'
                 'mode = "push_to_talk"\n'

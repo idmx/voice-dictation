@@ -74,16 +74,23 @@ class TestClipboardInject:
         injector._clipboard = mock_cm
         with (
             patch.object(MacOSTextInjector, "_write_clipboard"),
+            patch(
+                "voice_dictation.injection.macos_injector.subprocess.run",
+                return_value=make_completed_process(),
+            ) as mock_run,
             patch.dict("sys.modules", {"Quartz": mock_quartz}),
         ):
             injector.inject("x")
 
-        assert mock_quartz.CGEventCreateKeyboardEvent.call_count >= 2
-        key_down_call = mock_quartz.CGEventCreateKeyboardEvent.call_args_list[0]
-        assert key_down_call.args[1] == 9
-        assert key_down_call.args[2] is True
-        assert mock_quartz.CGEventPost.call_count >= 2
-        assert mock_quartz.CGEventSetFlags.call_count >= 2
+        # osascript (AppleScript) is the primary Cmd+V method and succeeds,
+        # so the CGEvent fallback should NOT be invoked.
+        osascript_calls = [
+            c for c in mock_run.call_args_list if c.args and "osascript" in c.args[0]
+        ]
+        assert len(osascript_calls) == 1
+        assert any("command down" in arg for arg in osascript_calls[0].args[0])
+        mock_quartz.CGEventCreateKeyboardEvent.assert_not_called()
+        mock_quartz.CGEventPost.assert_not_called()
 
     def test_clipboard_inject_restores_buffer(
         self, injector: MacOSTextInjector, mock_quartz: MagicMock

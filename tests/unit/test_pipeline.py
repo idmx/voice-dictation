@@ -74,12 +74,12 @@ def state_machine() -> StateMachine:
 
 @pytest.fixture
 def default_config() -> AppConfig:
-    return AppConfig(mode="push_to_talk", hotkey="cmd+shift+d", language="ru")
+    return AppConfig(mode="push_to_talk", hotkey="cmd+shift+1", language="ru")
 
 
 @pytest.fixture
 def toggle_config() -> AppConfig:
-    return AppConfig(mode="toggle", hotkey="cmd+shift+d", language="ru")
+    return AppConfig(mode="toggle", hotkey="cmd+shift+1", language="ru")
 
 
 @pytest.fixture
@@ -132,7 +132,7 @@ class TestPipelineStartStop:
         pipeline.start()
         mock_hotkey.register.assert_called_once()
         call_kwargs = mock_hotkey.register.call_args
-        assert call_kwargs[0][0] == "cmd+shift+d"
+        assert call_kwargs[0][0] == "cmd+shift+1"
         assert call_kwargs[1]["on_activate"] is not None
 
     def test_start_registers_deactivate_in_push_to_talk(
@@ -517,14 +517,14 @@ class TestErrorHandling:
 
 class TestConfigReload:
     def test_reregister_hotkey(self, pipeline: DictationPipeline, mock_hotkey: MagicMock) -> None:
-        pipeline.reregister_hotkey("cmd+shift+d", "ctrl+alt+f1")
-        mock_hotkey.unregister.assert_called_once_with("cmd+shift+d")
+        pipeline.reregister_hotkey("cmd+shift+1", "ctrl+alt+f1")
+        mock_hotkey.unregister.assert_called_once_with("cmd+shift+1")
         mock_hotkey.register.assert_called_once()
 
     def test_reregister_hotkey_passes_deactivate(
         self, pipeline: DictationPipeline, mock_hotkey: MagicMock
     ) -> None:
-        pipeline.reregister_hotkey("cmd+shift+d", "ctrl+alt+f1")
+        pipeline.reregister_hotkey("cmd+shift+1", "ctrl+alt+f1")
         call_kwargs = mock_hotkey.register.call_args
         assert call_kwargs[1]["on_deactivate"] is not None
 

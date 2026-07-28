@@ -75,6 +75,30 @@ class TrayIcon:
         self._thread.start()
         logger.info("Tray icon started")
 
+    def run_blocking(self) -> None:
+        """Run the tray icon in the **current** (main) thread.
+
+        This is required on macOS so the main thread processes system events.
+        The call blocks until :meth:`stop` is invoked.
+        """
+        try:
+            import pystray
+        except ImportError:
+            logger.warning("pystray not available, tray icon disabled")
+            return
+
+        initial_image = self._load_icon("idle")
+        menu = self._create_menu()
+
+        self._icon = pystray.Icon(
+            name="Voice Dictation",
+            icon=initial_image,
+            title="Voice Dictation — Готов",
+            menu=menu,
+        )
+        logger.info("Tray icon starting (main thread)")
+        self._icon.run()
+
     def stop(self) -> None:
         """Stop the tray icon."""
         if self._icon is None:

@@ -7,6 +7,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ('assets/icons', 'assets/icons'),
+        ('.venv/lib/python3.11/site-packages/faster_whisper/assets/silero_vad_v6.onnx', 'faster_whisper/assets'),
     ],
     hiddenimports=[
         'sounddevice',
@@ -42,7 +43,12 @@ if sys.platform == 'darwin':
         'AppKit',
         'ApplicationServices',
         'CoreFoundation',
+        'Foundation',
         'objc',
+        'Carbon',
+    ]
+    a.binaries += [
+        # Ensure libdispatch is bundled for dispatch_async in carbon_listener
     ]
 elif sys.platform == 'win32':
     a.hiddenimports += [

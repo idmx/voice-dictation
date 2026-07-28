@@ -10,7 +10,7 @@ class TestAppConfig:
     """Tests for the AppConfig schema."""
 
     def test_default_config(self, default_config: AppConfig) -> None:
-        assert default_config.hotkey == "cmd+shift+d"
+        assert default_config.hotkey == "cmd+shift+1"
         assert default_config.mode == "push_to_talk"
         assert default_config.whisper_model == "base"
         assert default_config.language == "ru"
@@ -41,12 +41,12 @@ class TestAppConfig:
         assert sample_config.log_level == "DEBUG"
 
     def test_hotkey_normalized_to_lower(self) -> None:
-        config = AppConfig(hotkey="CMD+SHIFT+D")
-        assert config.hotkey == "cmd+shift+d"
+        config = AppConfig(hotkey="CMD+SHIFT+1")
+        assert config.hotkey == "cmd+shift+1"
 
     def test_hotkey_stripped(self) -> None:
-        config = AppConfig(hotkey="  cmd+shift+d  ")
-        assert config.hotkey == "cmd+shift+d"
+        config = AppConfig(hotkey="  cmd+shift+1  ")
+        assert config.hotkey == "cmd+shift+1"
 
     def test_empty_hotkey_rejected(self) -> None:
         with pytest.raises(ValidationError) as exc_info:

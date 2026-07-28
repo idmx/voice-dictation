@@ -21,6 +21,7 @@ from __future__ import annotations
 import signal
 import sys
 import threading
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from loguru import logger
@@ -31,7 +32,6 @@ from voice_dictation.config.manager import ConfigManager
 from voice_dictation.config.schema import AppConfig
 from voice_dictation.core.state import State, StateMachine
 from voice_dictation.hotkey.base import HotkeyListener
-from voice_dictation.hotkey.pynput_listener import PynputHotkeyListener
 from voice_dictation.injection import create_injector
 from voice_dictation.injection.base import TextInjector
 from voice_dictation.pipeline import DictationPipeline
@@ -54,6 +54,8 @@ class Application:
     otherwise it is built from configuration with graceful degradation on
     failure.
     """
+
+    _PID_FILE = Path.home() / ".voice-dictation" / "voice-dictation.pid"
 
     def __init__(
         self,
@@ -78,7 +80,7 @@ class Application:
         self._state_machine = StateMachine()
         self._running = False
         self._shutdown_event = threading.Event()
-        self._tray = None
+        self._tray: object | None = None
         self._current_hotkey: str = ""
 
         self._audio_capture: AudioCapture | None = audio_capture
@@ -88,16 +90,32 @@ class Application:
         self._clipboard_manager: ClipboardManager | None = clipboard_manager
         self._pipeline: DictationPipeline | None = None
 
-        self._init_components()
+        # Only init injected components + lightweight config callbacks now.
+        # Heavy components (audio, whisper, pynput) are deferred to run()
+        # so the main thread can start the macOS event loop quickly.
+        if all(
+            c is not None
+            for c in (
+                self._audio_capture,
+                self._recognition_engine,
+                self._text_injector,
+                self._hotkey_listener,
+            )
+        ):
+            self._build_pipeline()
+
         self._state_machine.on_transition(self._on_state_changed)
         self._config_manager.on_reload(self._on_config_reload)
 
     # ------------------------------------------------------------------
-    # Component initialization
+    # Component initialization (deferred to background thread)
     # ------------------------------------------------------------------
 
     def _init_components(self) -> None:
-        """Create any components not injected via the constructor."""
+        """Create any components not injected via the constructor.
+
+        Called from a background thread — safe to do heavy I/O here.
+        """
         if self._audio_capture is None:
             self._audio_capture = self._create_audio_capture()
         if self._recognition_engine is None:
@@ -106,9 +124,15 @@ class Application:
             self._text_injector = self._create_text_injector()
         if self._clipboard_manager is None:
             self._clipboard_manager = self._create_clipboard_manager()
+        # Hotkey listener was already created & started on the main thread — skip.
+        # If it wasn't (e.g. on non-macOS or in tests), create it here.
         if self._hotkey_listener is None:
             self._hotkey_listener = self._create_hotkey_listener()
 
+        self._build_pipeline()
+
+    def _build_pipeline(self) -> None:
+        """Assemble the pipeline from already-created components."""
         if all(
             c is not None
             for c in (
@@ -155,6 +179,21 @@ class Application:
 
     def _create_hotkey_listener(self) -> HotkeyListener | None:
         try:
+            if self._platform == "macos":
+                # Use CarbonHotkeyListener on macOS — RegisterEventHotKey
+                # requires no Accessibility permissions and never calls TIS,
+                # so it avoids both the SIGABRT crash and the permission
+                # prompt that CGEventTap suffers from.
+                from voice_dictation.hotkey.carbon_listener import (
+                    CarbonHotkeyListener,
+                )
+
+                return CarbonHotkeyListener(mode=self._config.mode)
+            # Fallback to pynput on non-macOS platforms
+            from voice_dictation.hotkey.pynput_listener import (
+                PynputHotkeyListener,
+            )
+
             return PynputHotkeyListener(mode=self._config.mode)
         except Exception as exc:
             logger.error(f"Failed to initialize hotkey listener: {exc}")
@@ -218,7 +257,12 @@ class Application:
     # ------------------------------------------------------------------
 
     def run(self) -> None:
-        """Start the voice dictation application and block until shutdown."""
+        """Start the voice dictation application.
+
+        On macOS the main thread **must** run the event loop (pystray / AppKit)
+        so that the system does not report the app as unresponsive.  The pipeline
+        and all other subsystems are started in background threads.
+        """
         from voice_dictation import __version__
 
         logger.info(f"Voice Dictation v{__version__} starting on {self._platform}")
@@ -226,32 +270,72 @@ class Application:
 
         self._running = True
 
-        self._register_signal_handlers()
-
-        if self._pipeline is not None:
-            self._pipeline.start()
-        else:
-            logger.error("Pipeline not initialised — cannot start dictation")
-
-        try:
-            self._config_manager.start_watching()
-        except Exception as exc:
-            logger.error(f"Failed to start config watcher: {exc}")
+        # Start pipeline + config watcher in background
+        self._start_background_services()
 
         logger.info("Voice Dictation started")
         logger.info(f"Hotkey: {self._config.hotkey} (mode: {self._config.mode})")
         logger.info(f"Model: {self._config.whisper_model} | Language: {self._config.language}")
         logger.info(f"Injection method: {self._config.injection_method}")
 
-        self._shutdown_event.wait()
+        # Create tray and run in main thread (blocks until quit).
+        # This keeps macOS happy — the main thread processes system events.
+        from voice_dictation.ui.tray import TrayIcon
+
+        self._tray = TrayIcon(config=self._config, app=self)
+        self._tray.run_blocking()
+
+        # When tray exits (user clicked "Quit"), clean up.
+        self._do_shutdown()
+
+    def _start_background_services(self) -> None:
+        """Initialise heavy components and start pipeline in background."""
+        self._register_signal_handlers()
+
+        def _init_and_start() -> None:
+            """Initialise components (may take seconds) then start pipeline."""
+            self._init_components()
+
+            if self._pipeline is not None:
+                self._pipeline.start()
+            else:
+                logger.error("Pipeline not initialised — cannot start dictation")
+
+        threading.Thread(
+            target=_init_and_start,
+            daemon=True,
+            name="pipeline-init",
+        ).start()
+
+        try:
+            self._config_manager.start_watching()
+        except Exception as exc:
+            logger.error(f"Failed to start config watcher: {exc}")
 
     def shutdown(self) -> None:
-        """Gracefully shut down all components."""
+        """Request application shutdown.
+
+        Stops the tray icon (which unblocks the main thread) and signals
+        background services to stop.
+        """
         if not self._running:
             return
-
-        logger.info("Shutting down Voice Dictation...")
+        logger.info("Shutdown requested...")
         self._running = False
+
+        # Stop the tray — this will cause run_blocking() to return
+        # so the main thread can proceed with cleanup.
+        if self._tray is not None:
+            import contextlib
+
+            with contextlib.suppress(Exception):
+                self._tray.stop()
+
+        self._shutdown_event.set()
+
+    def _do_shutdown(self) -> None:
+        """Perform the actual cleanup after the main loop has exited."""
+        logger.info("Shutting down Voice Dictation...")
 
         if self._pipeline is not None:
             self._pipeline.stop()
@@ -267,7 +351,6 @@ class Application:
             except Exception as exc:
                 logger.error(f"Error unloading recognition engine: {exc}")
 
-        self._shutdown_event.set()
         logger.info("Voice Dictation stopped")
 
     # ------------------------------------------------------------------

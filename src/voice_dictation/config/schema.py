@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field, field_validator
 class AppConfig(BaseModel):
     """Application configuration schema."""
 
-    hotkey: str = Field(default="cmd+shift+d", description="Global hotkey combination")
+    hotkey: str = Field(default="cmd+shift+1", description="Global hotkey combination")
     mode: Literal["push_to_talk", "toggle"] = Field(
         default="push_to_talk", description="Hotkey activation mode"
     )

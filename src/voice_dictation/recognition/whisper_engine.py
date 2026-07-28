@@ -112,7 +112,7 @@ class WhisperEngine(RecognitionEngine):
                 beam_size=5,
                 language=lang,
                 initial_prompt=self._initial_prompt if self._initial_prompt else None,
-                vad_filter=True,
+                vad_filter=False,
             )
             text = " ".join(segment.text.strip() for segment in segments).strip()
             logger.debug(f"Transcribed ({lang}): {text[:80]}{'...' if len(text) > 80 else ''}")
