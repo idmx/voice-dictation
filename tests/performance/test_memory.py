@@ -268,8 +268,6 @@ class TestMemoryUsage:
         stats = snapshot2.compare_to(snapshot1, "lineno")
         total_diff = sum(stat.size_diff for stat in stats)
         growth_mb = total_diff / (1024 * 1024)
-        assert growth_mb < 10, (
-            f"Memory growth after 20 transcribe calls: {growth_mb:.2f}MB"
-        )
+        assert growth_mb < 10, f"Memory growth after 20 transcribe calls: {growth_mb:.2f}MB"
         assert engine.transcribe_called == 20
         pipeline.stop()

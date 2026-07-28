@@ -249,9 +249,7 @@ class TestLatencyBenchmarks:
         assert injector._inject_event.wait(timeout=5.0), "inject() was not called"
         elapsed_ms = (time.monotonic() - start) * 1000
 
-        assert elapsed_ms < 100, (
-            f"Transcript ready to inject took {elapsed_ms:.2f}ms"
-        )
+        assert elapsed_ms < 100, f"Transcript ready to inject took {elapsed_ms:.2f}ms"
         pipeline.stop()
 
     def test_full_pipeline_2sec_dictation(self) -> None:
@@ -287,9 +285,7 @@ class TestLatencyBenchmarks:
             listener.simulate_press()
             assert _wait_for_state(sm, State.RECORDING, timeout=5.0)
             listener.simulate_release()
-            assert _wait_for_state(sm, State.IDLE, timeout=5.0), (
-                f"Cycle {i} did not complete"
-            )
+            assert _wait_for_state(sm, State.IDLE, timeout=5.0), f"Cycle {i} did not complete"
         elapsed_s = time.monotonic() - start
 
         assert elapsed_s < 5.0, f"10 cycles took {elapsed_s:.2f}s"
