@@ -153,6 +153,25 @@ class PynputHotkeyListener(HotkeyListener):
         self._activated: dict[str, bool] = {}
         self._pressed_keys: set[Any] = set()
 
+    def set_mode(self, mode: str) -> None:
+        """Switch activation mode at runtime (push_to_talk <-> toggle).
+
+        Unlike CarbonHotkeyListener, PynputHotkeyListener does not need
+        to re-install any system hooks — we only need to update the
+        internal _mode flag and reset toggle states.
+        """
+        valid_modes = ("push_to_talk", "toggle")
+        if mode not in valid_modes:
+            logger.warning(f"Unknown mode: {mode!r} not in {valid_modes}")
+            return
+        old = self._mode
+        self._mode = mode
+        with self._lock:
+            for hk in list(self._toggle_states):
+                self._toggle_states[hk] = False
+                self._activated[hk] = False
+        logger.info(f"PynputHotkeyListener mode: {old} -> {mode}")
+
     def register(
         self,
         hotkey: str,

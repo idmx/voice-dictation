@@ -4,11 +4,20 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from voice_dictation.platform.detect import is_macos
+
+
+def _default_hotkey() -> str:
+    """Return platform-appropriate default hotkey."""
+    if is_macos():
+        return "cmd+shift+1"
+    return "ctrl+shift+1"
+
 
 class AppConfig(BaseModel):
     """Application configuration schema."""
 
-    hotkey: str = Field(default="cmd+shift+1", description="Global hotkey combination")
+    hotkey: str = Field(default_factory=_default_hotkey, description="Global hotkey combination")
     mode: Literal["push_to_talk", "toggle"] = Field(
         default="push_to_talk", description="Hotkey activation mode"
     )

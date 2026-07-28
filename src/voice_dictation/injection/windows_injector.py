@@ -16,6 +16,26 @@ _VK_V = 0x56
 _INPUT_KEYBOARD = 1
 _KEYEVENTF_UNICODE = 0x0004
 _KEYEVENTF_KEYUP = 0x0002
+_KEYEVENTF_SCANCODE = 0x0008
+
+# ---------------------------------------------------------------------------
+# Win32 INPUT structure (correct size for both x86 and x64)
+#
+# The Win32 INPUT union must accommodate MOUSEINPUT (the largest member).
+# On x64, MOUSEINPUT is 32 bytes vs KEYBDINPUT at 16 bytes.  If the union
+# is too small, SendInput reads past the struct boundary and returns 0.
+# ---------------------------------------------------------------------------
+
+
+class _MOUSEINPUT(ctypes.Structure):
+    _fields_ = (
+        ("dx", wintypes.LONG),
+        ("dy", wintypes.LONG),
+        ("mouseData", wintypes.DWORD),
+        ("dwFlags", wintypes.DWORD),
+        ("time", wintypes.DWORD),
+        ("dwExtraInfo", ctypes.POINTER(wintypes.ULONG)),
+    )
 
 
 class _KEYBDINPUT(ctypes.Structure):
@@ -29,7 +49,7 @@ class _KEYBDINPUT(ctypes.Structure):
 
 
 class _InputUnion(ctypes.Union):
-    _fields_ = (("ki", _KEYBDINPUT),)
+    _fields_ = (("mi", _MOUSEINPUT), ("ki", _KEYBDINPUT))
 
 
 class _INPUT(ctypes.Structure):
@@ -43,7 +63,7 @@ class WindowsTextInjector(TextInjector):
         self,
         method: str = "clipboard",
         restore_clipboard: bool = True,
-        paste_delay: float = 0.1,
+        paste_delay: float = 0.5,
     ) -> None:
         if method not in ("clipboard", "typing"):
             raise ValueError(f"Unknown injection method: {method!r}")
@@ -99,10 +119,10 @@ class WindowsTextInjector(TextInjector):
     def _simulate_ctrl_v(self) -> None:
         send_input = self._load_sendinput()
         inputs = [
-            self._make_keyboard_input(_VK_CONTROL, 0),
-            self._make_keyboard_input(_VK_V, 0),
-            self._make_keyboard_input(_VK_V, _KEYEVENTF_KEYUP),
-            self._make_keyboard_input(_VK_CONTROL, _KEYEVENTF_KEYUP),
+            self._make_keyboard_input_vk(_VK_CONTROL, 0),
+            self._make_keyboard_input_vk(_VK_V, 0),
+            self._make_keyboard_input_vk(_VK_V, _KEYEVENTF_KEYUP),
+            self._make_keyboard_input_vk(_VK_CONTROL, _KEYEVENTF_KEYUP),
         ]
         arr = (_INPUT * 4)(*inputs)
         sent = send_input(4, ctypes.pointer(arr[0]), ctypes.sizeof(_INPUT))
@@ -112,11 +132,36 @@ class WindowsTextInjector(TextInjector):
 
     @staticmethod
     def _make_keyboard_input(scan: int, flags: int) -> "_INPUT":
+        """Create a KEYBDINPUT using scan code (for KEYEVENTF_UNICODE typing).
+
+        KEYEVENTF_UNICODE events use wScan for the character code; the
+        KEYEVENTF_SCANCODE flag must NOT be set when KEYEVENTF_UNICODE
+        is present (they are mutually exclusive per MSDN).
+        """
         inp = _INPUT()
         inp.type = _INPUT_KEYBOARD
         inp.union.ki.wVk = 0
         inp.union.ki.wScan = scan
+        # Do NOT add KEYEVENTF_SCANCODE here — KEYEVENTF_UNICODE already
+        # tells Windows to interpret wScan as a Unicode character code.
         inp.union.ki.dwFlags = flags
+        inp.union.ki.time = 0
+        inp.union.ki.dwExtraInfo = ctypes.pointer(wintypes.ULONG(0))
+        return inp
+
+    @staticmethod
+    def _make_keyboard_input_vk(vk: int, flags: int) -> "_INPUT":
+        """Create a KEYBDINPUT using virtual key code (for Ctrl+V etc).
+
+        Uses wVk instead of wScan — when KEYEVENTF_SCANCODE is NOT set,
+        Windows uses wVk and ignores wScan.  This is the correct way to
+        simulate modifier combinations like Ctrl+V.
+        """
+        inp = _INPUT()
+        inp.type = _INPUT_KEYBOARD
+        inp.union.ki.wVk = vk
+        inp.union.ki.wScan = 0
+        inp.union.ki.dwFlags = flags  # No KEYEVENTF_SCANCODE — use wVk
         inp.union.ki.time = 0
         inp.union.ki.dwExtraInfo = ctypes.pointer(wintypes.ULONG(0))
         return inp
