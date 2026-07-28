@@ -182,7 +182,10 @@ class TestModelLifecycle:
 
     @patch("voice_dictation.recognition.whisper_engine.WhisperModel")
     def test_reload(self, mock_model_cls, engine):
-        with patch.object(engine._model_manager, "is_model_cached", return_value=True):
+        with (
+            patch.object(engine._model_manager, "is_model_cached", return_value=True),
+            patch.object(engine._model_manager, "verify_model", return_value=True),
+        ):
             engine._model = MagicMock()
             mock_model_cls.return_value = MagicMock()
             engine.reload("tiny")
@@ -190,7 +193,10 @@ class TestModelLifecycle:
 
     @patch("voice_dictation.recognition.whisper_engine.WhisperModel")
     def test_explicit_load_unload(self, mock_model_cls, engine):
-        with patch.object(engine._model_manager, "is_model_cached", return_value=True):
+        with (
+            patch.object(engine._model_manager, "is_model_cached", return_value=True),
+            patch.object(engine._model_manager, "verify_model", return_value=True),
+        ):
             engine._model = None
             mock_model_cls.return_value = MagicMock()
             engine.load()

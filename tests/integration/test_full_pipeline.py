@@ -203,7 +203,7 @@ def ptt_components():
     sm = StateMachine()
     tracker = _StateTracker()
     sm.on_transition(tracker)
-    cfg = AppConfig(mode="push_to_talk", hotkey="cmd+shift+1", language="ru")
+    cfg = AppConfig(mode="push_to_talk", hotkey="cmd+shift+1", language="ru", auto_punctuation=False)
     pipeline = DictationPipeline(
         state_machine=sm,
         audio_capture=audio,
@@ -224,7 +224,7 @@ def toggle_components():
     sm = StateMachine()
     tracker = _StateTracker()
     sm.on_transition(tracker)
-    cfg = AppConfig(mode="toggle", hotkey="cmd+shift+1", language="ru")
+    cfg = AppConfig(mode="toggle", hotkey="cmd+shift+1", language="ru", auto_punctuation=False)
     pipeline = DictationPipeline(
         state_machine=sm,
         audio_capture=audio,
@@ -281,7 +281,7 @@ class TestPipelineWithSilence:
         injector = MockTextInjector()
         listener = MockHotkeyListener(mode="push_to_talk")
         sm = StateMachine()
-        cfg = AppConfig(mode="push_to_talk")
+        cfg = AppConfig(mode="push_to_talk", auto_punctuation=False)
         pipeline = DictationPipeline(
             state_machine=sm,
             audio_capture=audio,
@@ -308,7 +308,7 @@ class TestPipelineWithNoise:
         injector = MockTextInjector()
         listener = MockHotkeyListener(mode="push_to_talk")
         sm = StateMachine()
-        cfg = AppConfig(mode="push_to_talk")
+        cfg = AppConfig(mode="push_to_talk", auto_punctuation=False)
         pipeline = DictationPipeline(
             state_machine=sm,
             audio_capture=audio,
@@ -334,7 +334,7 @@ class TestPipelineRecordingError:
         injector = MockTextInjector()
         listener = MockHotkeyListener(mode="push_to_talk")
         sm = StateMachine()
-        cfg = AppConfig(mode="push_to_talk")
+        cfg = AppConfig(mode="push_to_talk", auto_punctuation=False)
         pipeline = DictationPipeline(
             state_machine=sm,
             audio_capture=audio,
@@ -359,7 +359,7 @@ class TestPipelineRecognitionError:
         injector = MockTextInjector()
         listener = MockHotkeyListener(mode="push_to_talk")
         sm = StateMachine()
-        cfg = AppConfig(mode="push_to_talk")
+        cfg = AppConfig(mode="push_to_talk", auto_punctuation=False)
         pipeline = DictationPipeline(
             state_machine=sm,
             audio_capture=audio,
@@ -387,7 +387,7 @@ class TestPipelineInjectionError:
         sm = StateMachine()
         tracker = _StateTracker()
         sm.on_transition(tracker)
-        cfg = AppConfig(mode="push_to_talk")
+        cfg = AppConfig(mode="push_to_talk", auto_punctuation=False)
         pipeline = DictationPipeline(
             state_machine=sm,
             audio_capture=audio,
@@ -413,7 +413,7 @@ class TestRapidHotkeyPresses:
         injector = MockTextInjector()
         listener = MockHotkeyListener(mode="push_to_talk")
         sm = StateMachine()
-        cfg = AppConfig(mode="push_to_talk")
+        cfg = AppConfig(mode="push_to_talk", auto_punctuation=False)
         pipeline = DictationPipeline(
             state_machine=sm,
             audio_capture=audio,
@@ -447,7 +447,7 @@ class TestCancelDuringRecording:
         injector = MockTextInjector()
         listener = MockHotkeyListener(mode="push_to_talk")
         sm = StateMachine()
-        cfg = AppConfig(mode="push_to_talk")
+        cfg = AppConfig(mode="push_to_talk", auto_punctuation=False)
         pipeline = DictationPipeline(
             state_machine=sm,
             audio_capture=audio,

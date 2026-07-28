@@ -198,6 +198,15 @@ class DictationPipeline:
             self._state_machine.force_idle()
             return
 
+        # Apply auto-punctuation if enabled
+        if self._config.auto_punctuation:
+            try:
+                from voice_dictation.utils.text_postprocess import apply_auto_punctuation
+
+                text = apply_auto_punctuation(text, language=self._config.language)
+            except Exception as exc:
+                logger.warning(f"Auto-punctuation failed: {exc}")
+
         try:
             self._inject(text)
         except Exception as exc:

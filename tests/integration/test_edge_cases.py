@@ -182,7 +182,7 @@ def _make_pipeline(
     if injector is None:
         injector = MockTextInjector()
     if config is None:
-        config = AppConfig(mode=mode, hotkey="cmd+shift+1", language="ru")
+        config = AppConfig(mode=mode, hotkey="cmd+shift+1", language="ru", auto_punctuation=False)
     listener = MockHotkeyListener(mode=mode)
     sm = StateMachine()
     pipeline = DictationPipeline(
@@ -647,7 +647,7 @@ class TestConfigChangeDuringRecording:
         audio = MockAudioCapture()
         engine = SlowEngine(transcription_result="Запись")
         injector = MockTextInjector()
-        config = AppConfig(mode="push_to_talk", hotkey="cmd+shift+1", language="ru")
+        config = AppConfig(mode="push_to_talk", hotkey="cmd+shift+1", language="ru", auto_punctuation=False)
         pipeline, sm, listener, _, _, _ = _make_pipeline(
             audio=audio, engine=engine, injector=injector, config=config
         )
@@ -657,7 +657,7 @@ class TestConfigChangeDuringRecording:
         assert sm.state == State.RECORDING
 
         pipeline.config = AppConfig(
-            mode="push_to_talk", hotkey="cmd+shift+1", language="en"
+            mode="push_to_talk", hotkey="cmd+shift+1", language="en", auto_punctuation=False
         )
 
         listener.simulate_release()

@@ -20,7 +20,7 @@ class TestAppConfig:
         assert default_config.audio_device is None
         assert default_config.sound_indicators is True
         assert default_config.restore_clipboard is True
-        assert default_config.initial_prompt == ""
+        assert default_config.initial_prompt == "Текст на русском языке."
         assert default_config.auto_punctuation is True
         assert default_config.model_cache_dir == "~/.voice-dictation/models"
         assert default_config.log_level == "INFO"

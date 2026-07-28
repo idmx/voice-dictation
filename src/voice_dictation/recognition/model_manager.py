@@ -5,7 +5,9 @@ from __future__ import annotations
 import contextlib
 import shutil
 import threading
+from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 from loguru import logger
 
@@ -15,6 +17,7 @@ SUPPORTED_MODELS: dict[str, dict[str, int]] = {
     "tiny": {"size_bytes": 75_000_000},
     "base": {"size_bytes": 145_000_000},
     "small": {"size_bytes": 488_000_000},
+    "medium": {"size_bytes": 1_500_000_000},
 }
 
 
@@ -63,7 +66,29 @@ class ModelManager:
             return False
         path = self.get_model_path(model_size)
         try:
-            total_size = sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
+            # Model is only valid if model.bin exists (not .incomplete)
+            model_bin = path / "model.bin"
+            if not model_bin.exists():
+                # Check subdirectories (faster-whisper may nest)
+                model_bins = list(path.rglob("model.bin"))
+                incomplete_files = list(path.rglob("*.incomplete"))
+                if not model_bins:
+                    if incomplete_files:
+                        logger.warning(
+                            f"Model '{model_size}' has incomplete download "
+                            f"({len(incomplete_files)} .incomplete files)"
+                        )
+                    else:
+                        logger.warning(
+                            f"Model '{model_size}' missing model.bin"
+                        )
+                    return False
+
+            total_size = sum(
+                f.stat().st_size
+                for f in path.rglob("*")
+                if f.is_file() and not f.name.endswith(".incomplete")
+            )
             expected_min = SUPPORTED_MODELS[model_size]["size_bytes"]
             min_acceptable = int(expected_min * 0.5)
             if total_size < min_acceptable:
@@ -77,7 +102,18 @@ class ModelManager:
             logger.error(f"Error verifying model '{model_size}': {e}")
             return False
 
-    def download_model(self, model_size: str) -> Path:
+    def download_model(
+        self,
+        model_size: str,
+        progress_callback: Callable[[int], None] | None = None,
+    ) -> Path:
+        """Download a model, optionally reporting progress.
+
+        Args:
+            model_size: Model name (tiny, base, small, medium).
+            progress_callback: If provided, called with download percentage
+                (0-100) as the download progresses.
+        """
         self.validate_model_name(model_size)
         download_lock = self._get_download_lock(model_size)
         with download_lock:
@@ -85,23 +121,84 @@ class ModelManager:
 
             if self.is_model_cached(model_size) and self.verify_model(model_size):
                 logger.info(f"Model '{model_size}' already cached at {model_path}")
+                if progress_callback:
+                    progress_callback(100)
                 return model_path
 
             if self.is_model_cached(model_size) and not self.verify_model(model_size):
-                logger.warning(f"Corrupted model '{model_size}', removing and re-downloading")
+                logger.warning(f"Corrupted/incomplete model '{model_size}', removing and re-downloading")
                 self.remove_model(model_size)
+
+            # Clean up any leftover .incomplete files from previous attempts
+            if model_path.exists():
+                for f in model_path.rglob("*.incomplete"):
+                    try:
+                        f.unlink()
+                        logger.debug(f"Removed incomplete file: {f}")
+                    except OSError:
+                        pass
 
             logger.info(f"Downloading model '{model_size}'...")
             try:
-                from faster_whisper import download_model as fw_download
-
-                downloaded_path = fw_download(model_size, output_dir=str(model_path))
+                # Use huggingface_hub directly with progress tracking
+                downloaded_path = self._download_with_progress(
+                    model_size, model_path, progress_callback
+                )
                 logger.info(f"Model '{model_size}' downloaded to {downloaded_path}")
+                if progress_callback:
+                    progress_callback(100)
                 return Path(downloaded_path)
             except Exception as e:
                 if model_path.exists():
                     shutil.rmtree(model_path, ignore_errors=True)
                 raise ModelNotFoundError(f"Failed to download model '{model_size}': {e}") from e
+
+    def _download_with_progress(
+        self,
+        model_size: str,
+        output_dir: Path,
+        progress_callback: Callable[[int], None] | None,
+    ) -> str:
+        """Download model via huggingface_hub with progress tracking.
+
+        Uses a custom tqdm subclass that reports download progress via
+        the callback, since faster_whisper.download_model disables tqdm.
+        """
+        try:
+            from huggingface_hub import snapshot_download
+            from tqdm import tqdm
+
+            # Map model size to HuggingFace repo ID
+            repo_id = f"Systran/faster-whisper-{model_size}"
+
+            # Create a custom tqdm that reports progress
+            callback = progress_callback
+
+            class ProgressTqdm(tqdm):
+                """tqdm subclass that reports download progress to callback."""
+
+                def update(self, n: int = 1) -> bool:
+                    result = super().update(n)
+                    if callback is not None:
+                        try:
+                            if self.total and self.total > 0:
+                                pct = min(int(self.n / self.total * 100), 100)
+                                callback(pct)
+                        except Exception:
+                            pass
+                    return result
+
+            return snapshot_download(
+                repo_id,
+                local_dir=str(output_dir),
+                tqdm_class=ProgressTqdm,
+            )
+        except ImportError:
+            # Fallback to faster_whisper.download_model (no progress)
+            logger.warning("huggingface_hub not available, downloading without progress")
+            from faster_whisper import download_model as fw_download
+
+            return fw_download(model_size, output_dir=str(output_dir))
 
     def remove_model(self, model_size: str) -> None:
         model_path = self.get_model_path(model_size)

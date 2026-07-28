@@ -66,13 +66,22 @@ class TestDownloadModel:
             model_manager.download_model("mega")
 
     def test_download_failure_cleanup(self, model_manager):
-        with patch.dict("sys.modules", {"faster_whisper": MagicMock()}):
-            import sys
+        model_path = model_manager.get_model_path("tiny")
+        model_path.mkdir(parents=True)
+        (model_path / "partial.incomplete").write_bytes(b"\x00" * 100)
 
-            mock_fw = sys.modules["faster_whisper"]
-            mock_fw.download_model.side_effect = RuntimeError("download failed")
+        with (
+            patch.object(model_manager, "is_model_cached", return_value=False),
+            patch.object(
+                model_manager,
+                "_download_with_progress",
+                side_effect=RuntimeError("download failed"),
+            ),
+        ):
             with pytest.raises(ModelNotFoundError, match="Failed to download"):
                 model_manager.download_model("tiny")
+
+        assert not model_path.exists()
 
 
 class TestModelInfo:
@@ -88,7 +97,7 @@ class TestModelInfo:
 class TestAvailableModels:
     def test_get_available_models(self, model_manager):
         models = model_manager.get_available_models()
-        assert models == ["tiny", "base", "small"]
+        assert models == ["tiny", "base", "small", "medium"]
 
     def test_list_supported_models(self):
         models = ModelManager.list_supported_models()

@@ -74,12 +74,12 @@ def state_machine() -> StateMachine:
 
 @pytest.fixture
 def default_config() -> AppConfig:
-    return AppConfig(mode="push_to_talk", hotkey="cmd+shift+1", language="ru")
+    return AppConfig(mode="push_to_talk", hotkey="cmd+shift+1", language="ru", auto_punctuation=False)
 
 
 @pytest.fixture
 def toggle_config() -> AppConfig:
-    return AppConfig(mode="toggle", hotkey="cmd+shift+1", language="ru")
+    return AppConfig(mode="toggle", hotkey="cmd+shift+1", language="ru", auto_punctuation=False)
 
 
 @pytest.fixture

@@ -21,7 +21,7 @@ class AppConfig(BaseModel):
     mode: Literal["push_to_talk", "toggle"] = Field(
         default="push_to_talk", description="Hotkey activation mode"
     )
-    whisper_model: Literal["tiny", "base", "small"] = Field(
+    whisper_model: Literal["tiny", "base", "small", "medium"] = Field(
         default="base", description="Whisper model size"
     )
     language: str = Field(default="ru", description="Recognition language code")
@@ -35,7 +35,10 @@ class AppConfig(BaseModel):
     audio_device: int | None = Field(default=None, description="Audio device index (None=default)")
     sound_indicators: bool = Field(default=True, description="Play sound indicators")
     restore_clipboard: bool = Field(default=True, description="Restore clipboard after injection")
-    initial_prompt: str = Field(default="", description="Initial prompt for Whisper context")
+    initial_prompt: str = Field(
+        default="Текст на русском языке.",
+        description="Initial prompt for Whisper context — improves recognition accuracy and punctuation",
+    )
     auto_punctuation: bool = Field(default=True, description="Enable automatic punctuation")
     model_cache_dir: str = Field(
         default="~/.voice-dictation/models", description="Model cache directory"

@@ -100,7 +100,7 @@ def _make(result: str = "Привет"):
     inj = _Injector()
     listener = _Listener()
     sm = StateMachine()
-    cfg = AppConfig(mode="push_to_talk")
+    cfg = AppConfig(mode="push_to_talk", auto_punctuation=False)
     pipe = DictationPipeline(sm, audio, engine, inj, listener, cfg)
     return pipe, sm, listener, inj
 
@@ -124,7 +124,7 @@ class TestE2EMacOSPipeline:
         inj = _Injector()
         listener = _Listener()
         sm = StateMachine()
-        cfg = AppConfig(mode="toggle")
+        cfg = AppConfig(mode="toggle", auto_punctuation=False)
         pipe = DictationPipeline(sm, audio, engine, inj, listener, cfg)
         pipe.start()
         listener.on_activate()
@@ -140,7 +140,7 @@ class TestE2EMacOSPipeline:
         inj = _Injector()
         listener = _Listener()
         sm = StateMachine()
-        cfg = AppConfig(mode="push_to_talk")
+        cfg = AppConfig(mode="push_to_talk", auto_punctuation=False)
         pipe = DictationPipeline(sm, audio, engine, inj, listener, cfg)
         pipe.start()
         listener.on_activate()

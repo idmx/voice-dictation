@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+from collections.abc import Callable
 
 import numpy as np
 from faster_whisper import WhisperModel
@@ -33,9 +34,14 @@ class WhisperEngine(RecognitionEngine):
         self._model = None
         self._model_manager = ModelManager(cache_dir=model_cache_dir)
         self._load_lock = threading.Lock()
+        self._progress_callback: Callable[[int], None] | None = None
 
     def is_loaded(self) -> bool:
         return self._model is not None
+
+    def set_progress_callback(self, callback: Callable[[int], None]) -> None:
+        """Set a callback for download progress reporting (0-100%)."""
+        self._progress_callback = callback
 
     def _load_model(self) -> None:
         if self._model is not None:
@@ -44,19 +50,27 @@ class WhisperEngine(RecognitionEngine):
             if self._model is not None:
                 return
             try:
-                model_path = self._model_manager.get_model_path(self._model_size)
-                if self._model_manager.is_model_cached(self._model_size):
-                    logger.info(f"Loading cached model '{self._model_size}' from {model_path}")
+                if self._model_manager.is_model_cached(self._model_size) and \
+                   self._model_manager.verify_model(self._model_size):
+                    model_path = self._model_manager.get_model_path(self._model_size)
+                    # faster-whisper downloads to a subdirectory; find the
+                    # directory that actually contains model.bin
+                    actual_path = self._find_model_dir(model_path)
+                    logger.info(f"Loading cached model '{self._model_size}' from {actual_path}")
                     self._model = WhisperModel(
-                        str(model_path),
+                        str(actual_path),
                         device=self._device,
                         compute_type=self._compute_type,
                     )
                 else:
                     logger.info(f"Downloading and loading model '{self._model_size}'")
-                    downloaded_path = self._model_manager.download_model(self._model_size)
+                    downloaded_path = self._model_manager.download_model(
+                        self._model_size,
+                        progress_callback=self._progress_callback,
+                    )
+                    actual_path = self._find_model_dir(Path(downloaded_path))
                     self._model = WhisperModel(
-                        str(downloaded_path),
+                        str(actual_path),
                         device=self._device,
                         compute_type=self._compute_type,
                     )
@@ -66,6 +80,24 @@ class WhisperEngine(RecognitionEngine):
             except Exception as e:
                 self._model = None
                 raise ModelLoadError(f"Failed to load model '{self._model_size}': {e}") from e
+
+    @staticmethod
+    def _find_model_dir(base_path: Path) -> Path:
+        """Find the directory containing model.bin.
+
+        faster-whisper downloads models to a nested subdirectory
+        (e.g. model-medium/models--Systran--faster-whisper-medium/snapshots/xxx/).
+        WhisperModel expects the path to the directory containing model.bin.
+        """
+        # Direct hit
+        if (base_path / "model.bin").exists():
+            return base_path
+        # Search subdirectories
+        for model_bin in base_path.rglob("model.bin"):
+            return model_bin.parent
+        # Fallback — return base_path and let WhisperModel fail with a clear error
+        logger.warning(f"model.bin not found under {base_path}")
+        return base_path
 
     def load(self) -> None:
         self._load_model()
@@ -77,9 +109,20 @@ class WhisperEngine(RecognitionEngine):
                 logger.info(f"Model '{self._model_size}' unloaded")
 
     def reload(self, model_size: str) -> None:
+        logger.info(f"Reloading model: {self._model_size} -> {model_size}")
         self.unload()
         self._model_size = model_size
-        self._load_model()
+        try:
+            self._load_model()
+            if self._model is not None:
+                logger.info(f"Model '{model_size}' loaded successfully")
+            else:
+                logger.error(f"Model '{model_size}' failed to load — _model is None")
+        except Exception as e:
+            logger.error(f"Model '{model_size}' reload failed: {e}")
+            # Don't re-raise — the old model is unloaded, but we don't
+            # want to crash the background thread. Next transcription
+            # will attempt to load again via transcribe() -> _load_model().
 
     @staticmethod
     def _int16_to_float32(audio: np.ndarray) -> np.ndarray:

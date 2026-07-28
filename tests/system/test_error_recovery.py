@@ -113,7 +113,7 @@ class TestErrorRecovery:
         inj = _Injector()
         listener = _Listener()
         sm = StateMachine()
-        cfg = AppConfig(mode="push_to_talk")
+        cfg = AppConfig(mode="push_to_talk", auto_punctuation=False)
         pipe = DictationPipeline(sm, audio, engine, inj, listener, cfg)
         pipe.start()
 
@@ -132,7 +132,7 @@ class TestErrorRecovery:
         inj = _Injector()
         listener = _Listener()
         sm = StateMachine()
-        cfg = AppConfig(mode="push_to_talk")
+        cfg = AppConfig(mode="push_to_talk", auto_punctuation=False)
         pipe = DictationPipeline(sm, audio, engine_fail, inj, listener, cfg)
         pipe.start()
 
@@ -165,7 +165,7 @@ class TestErrorRecovery:
         engine = _Engine(result="Ошибка вставки")
         listener = _Listener()
         sm = StateMachine()
-        cfg = AppConfig(mode="push_to_talk")
+        cfg = AppConfig(mode="push_to_talk", auto_punctuation=False)
         pipe = DictationPipeline(sm, audio, engine, inj_fail, listener, cfg)
         pipe.start()
 
@@ -184,7 +184,7 @@ class TestErrorRecovery:
         inj = _Injector()
         listener = _Listener()
         sm = StateMachine()
-        cfg = AppConfig(mode="push_to_talk")
+        cfg = AppConfig(mode="push_to_talk", auto_punctuation=False)
         pipe = DictationPipeline(sm, audio_fail, engine, inj, listener, cfg)
         pipe.start()
 
@@ -209,7 +209,7 @@ class TestErrorRecovery:
         inj = _Injector()
         listener = _Listener()
         sm = StateMachine()
-        cfg = AppConfig(mode="push_to_talk")
+        cfg = AppConfig(mode="push_to_talk", auto_punctuation=False)
         pipe = DictationPipeline(sm, audio, engine, inj, listener, cfg)
         pipe.start()
 

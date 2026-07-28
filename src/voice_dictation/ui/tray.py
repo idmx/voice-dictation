@@ -34,7 +34,7 @@ _STATE_TOOLTIP_MAP: dict[State, str] = {
     State.INJECTING: "Вставка...",
 }
 
-_AVAILABLE_MODELS = ("tiny", "base", "small")
+_AVAILABLE_MODELS = ("tiny", "base", "small", "medium")
 _AVAILABLE_LANGUAGES = ("ru", "en")
 _AVAILABLE_MODES = ("push_to_talk", "toggle")
 
@@ -48,6 +48,8 @@ class TrayIcon:
         self._icon: pystray.Icon | None = None
         self._current_state = State.IDLE
         self._thread: threading.Thread | None = None
+        self._model_loading = False
+        self._loading_status: str | None = None
 
     def start(self) -> None:
         """Start the tray icon in a background thread."""
@@ -118,8 +120,13 @@ class TrayIcon:
         if self._icon is None:
             return
         self._current_state = state
-        icon_name = _STATE_ICON_MAP.get(state, "idle")
-        tooltip_suffix = _STATE_TOOLTIP_MAP.get(state, "Готов")
+        # Override with loading state if model is downloading/loading
+        if self._model_loading:
+            icon_name = "loading"
+            tooltip_suffix = self._loading_status or "Загрузка модели..."
+        else:
+            icon_name = _STATE_ICON_MAP.get(state, "idle")
+            tooltip_suffix = _STATE_TOOLTIP_MAP.get(state, "Готов")
         try:
             image = self._load_icon(icon_name)
             self._icon.icon = image
@@ -127,6 +134,24 @@ class TrayIcon:
             self._icon.update_menu()
         except Exception as exc:
             logger.debug(f"Failed to update tray icon: {exc}")
+
+    def set_model_loading(self, loading: bool, status: str | None = None) -> None:
+        """Show/hide model loading indicator in tray.
+
+        Args:
+            loading: Whether the model is currently loading.
+            status: Optional status text (e.g. "Загрузка 45%").
+        """
+        self._model_loading = loading
+        self._loading_status = status if loading else None
+        self.update_icon(self._current_state)
+        # Refresh menu so status line updates
+        if self._icon is not None:
+            try:
+                self._icon.menu = self._create_menu()
+                self._icon.update_menu()
+            except Exception:
+                pass
 
     def _load_icon(self, name: str) -> Image.Image:
         """Load an icon image from assets/icons/."""
@@ -156,6 +181,7 @@ class TrayIcon:
             "idle": (100, 100, 100),
             "recording": (220, 50, 50),
             "processing": (50, 120, 220),
+            "loading": (230, 150, 30),
         }
         color = color_map.get(name, (100, 100, 100))
         size = 64
@@ -170,7 +196,12 @@ class TrayIcon:
         """Create the tray context menu."""
         import pystray
 
-        status_text = _STATE_TOOLTIP_MAP.get(self._current_state, "Готов")
+        if self._model_loading and self._loading_status:
+            status_text = self._loading_status
+        elif self._model_loading:
+            status_text = "Загрузка модели..."
+        else:
+            status_text = _STATE_TOOLTIP_MAP.get(self._current_state, "Готов")
 
         return pystray.Menu(
             pystray.MenuItem(
@@ -222,6 +253,11 @@ class TrayIcon:
                 ),
             ),
             pystray.Menu.SEPARATOR,
+            pystray.MenuItem(
+                "Автопунктуация",
+                self._on_auto_punctuation_toggle,
+                checked=lambda _: self._config.auto_punctuation,
+            ),
             pystray.MenuItem("Настройки...", self._on_open_settings),
             pystray.MenuItem("Перезапуск", self._on_restart),
             pystray.MenuItem("Выход", self._on_quit),
@@ -280,10 +316,43 @@ class TrayIcon:
             self._config = self._config.model_copy(update={"whisper_model": model})
             if self._app:
                 self._app._config = self._config
-                if self._app._recognition_engine:
-                    self._app._recognition_engine.reload(model)
+                # Update pipeline config so it uses the new model name
+                if self._app._pipeline is not None:
+                    self._app._pipeline.config = self._config
+            self._persist_and_refresh_menu()
             logger.info(f"Model changed to '{model}'")
+
+            # Show loading indicator in tray
+            self.set_model_loading(True, "Загрузка модели...")
+
+            # Reload model in background thread — medium is 1.5 GB,
+            # downloading/loading blocks the main thread (Carbon event loop)
+            # for minutes if done synchronously.
+            if self._app and self._app._recognition_engine:
+                # Connect progress callback to update tray with percentage
+                def _on_progress(pct: int) -> None:
+                    self.set_model_loading(True, f"Загрузка модели {pct}%")
+
+                self._app._recognition_engine.set_progress_callback(_on_progress)
+
+                def _bg_reload() -> None:
+                    try:
+                        self._app._recognition_engine.reload(model)
+                        logger.info(f"Model '{model}' reloaded successfully")
+                    except Exception as exc:
+                        logger.error(f"Failed to reload model '{model}': {exc}")
+                    finally:
+                        # Restore tray to normal state
+                        self._app._recognition_engine.set_progress_callback(None)
+                        self.set_model_loading(False)
+
+                threading.Thread(
+                    target=_bg_reload, daemon=True, name="model-reload"
+                ).start()
+            else:
+                self.set_model_loading(False)
         except Exception as exc:
+            self.set_model_loading(False)
             logger.error(f"Failed to change model: {exc}")
 
     def _on_language_change(self, lang: str) -> None:
@@ -295,6 +364,7 @@ class TrayIcon:
             self._config = self._config.model_copy(update={"language": lang})
             if self._app:
                 self._app._config = self._config
+            self._persist_and_refresh_menu()
             logger.info(f"Language changed to '{lang}'")
         except Exception as exc:
             logger.error(f"Failed to change language: {exc}")
@@ -316,20 +386,35 @@ class TrayIcon:
                 self._app._config = self._config
                 if self._app._pipeline is not None:
                     self._app._pipeline.change_mode(mode)
-            # Persist to config file
-            try:
-                from voice_dictation.config.manager import ConfigManager
-                ConfigManager().save(self._config)
-            except Exception as exc:
-                logger.warning(f"Failed to save mode change to config: {exc}")
-            # Refresh tray menu so radio button updates
-            if self._icon is not None:
-                try:
-                    # Recreate menu so checked lambdas re-evaluate
-                    self._icon.menu = self._create_menu()
-                    self._icon.update_menu()
-                except Exception as exc:
-                    logger.debug(f"Menu update failed: {exc}")
+            self._persist_and_refresh_menu()
             logger.info(f"Mode changed to '{mode}'")
         except Exception as exc:
             logger.error(f"Failed to change mode: {exc}")
+
+    def _on_auto_punctuation_toggle(self) -> None:
+        """Toggle auto-punctuation on/off."""
+        new_value = not self._config.auto_punctuation
+        try:
+            self._config = self._config.model_copy(update={"auto_punctuation": new_value})
+            if self._app:
+                self._app._config = self._config
+                if self._app._pipeline is not None:
+                    self._app._pipeline.config = self._config
+            self._persist_and_refresh_menu()
+            logger.info(f"Auto-punctuation {'enabled' if new_value else 'disabled'}")
+        except Exception as exc:
+            logger.error(f"Failed to toggle auto-punctuation: {exc}")
+
+    def _persist_and_refresh_menu(self) -> None:
+        """Persist config to file and refresh tray menu."""
+        try:
+            from voice_dictation.config.manager import ConfigManager
+            ConfigManager().save(self._config)
+        except Exception as exc:
+            logger.warning(f"Failed to save config change: {exc}")
+        if self._icon is not None:
+            try:
+                self._icon.menu = self._create_menu()
+                self._icon.update_menu()
+            except Exception as exc:
+                logger.debug(f"Menu update failed: {exc}")
