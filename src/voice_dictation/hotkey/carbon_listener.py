@@ -235,6 +235,25 @@ class CarbonHotkeyListener(HotkeyListener):
         self._callback_ref: EventHandlerProcPtr | None = None
         self._target: int = 0
 
+    def set_mode(self, mode: str) -> None:
+        """Switch activation mode at runtime.
+
+        No need to re-install the Carbon event handler — it always
+        listens for both PRESSED and RELEASED. Only the internal
+        _mode flag and toggle state need updating.
+        """
+        valid_modes = ("push_to_talk", "toggle")
+        if mode not in valid_modes:
+            logger.warning(f"Unknown mode: {mode!r} not in {valid_modes}")
+            return
+        old = self._mode
+        self._mode = mode
+        # Reset toggle states when switching modes
+        for hk in list(self._toggle_states):
+            self._toggle_states[hk] = False
+            self._activated[hk] = False
+        logger.info(f"CarbonHotkeyListener mode: {old} -> {mode}")
+
     def register(
         self,
         hotkey: str,
@@ -377,23 +396,22 @@ class CarbonHotkeyListener(HotkeyListener):
     # ------------------------------------------------------------------
 
     def _install_event_handler(self) -> None:
-        """Install the Carbon event handler for hotkey events."""
+        """Install the Carbon event handler for hotkey events.
+
+        Always subscribes to BOTH PRESSED and RELEASED events regardless
+        of mode. This allows switching mode at runtime without needing to
+        re-install the event handler (which causes -9866 errors).
+        """
         self._target = _lib.GetApplicationEventTarget()
         if not self._target:
             raise RuntimeError("GetApplicationEventTarget returned NULL")
 
-        # Event types we listen for
-        if self._mode == "push_to_talk":
-            num_types = 2
-            event_types = (EventTypeSpec * 2)(
-                EventTypeSpec(K_EVENT_CLASS_KEYBOARD, K_EVENT_HOT_KEY_PRESSED),
-                EventTypeSpec(K_EVENT_CLASS_KEYBOARD, K_EVENT_HOT_KEY_RELEASED),
-            )
-        else:
-            num_types = 1
-            event_types = (EventTypeSpec * 1)(
-                EventTypeSpec(K_EVENT_CLASS_KEYBOARD, K_EVENT_HOT_KEY_PRESSED),
-            )
+        # Always listen for both event types
+        num_types = 2
+        event_types = (EventTypeSpec * 2)(
+            EventTypeSpec(K_EVENT_CLASS_KEYBOARD, K_EVENT_HOT_KEY_PRESSED),
+            EventTypeSpec(K_EVENT_CLASS_KEYBOARD, K_EVENT_HOT_KEY_RELEASED),
+        )
 
         # Create callback — must keep reference alive
         self._callback_ref = EventHandlerProcPtr(self._on_carbon_event)
@@ -535,15 +553,10 @@ class CarbonHotkeyListener(HotkeyListener):
                     self._activated[hotkey] = True
                     reg.on_activate()
             else:  # toggle
-                if not self._toggle_states.get(hotkey, False):
-                    self._toggle_states[hotkey] = True
-                    self._activated[hotkey] = True
-                    reg.on_activate()
-                else:
-                    self._toggle_states[hotkey] = False
-                    self._activated[hotkey] = False
-                    if reg.on_deactivate:
-                        reg.on_deactivate()
+                # In toggle mode, ALWAYS call on_activate.
+                # The pipeline decides whether to start or stop recording
+                # based on the current state (see _on_hotkey_down in pipeline.py).
+                reg.on_activate()
         except Exception as e:
             logger.error(f"Hotkey callback error on key-down: {e}")
 

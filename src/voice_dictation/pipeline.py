@@ -259,6 +259,55 @@ class DictationPipeline:
         except Exception as exc:
             logger.error(f"Failed to register new hotkey '{new_hotkey}': {exc}")
 
+    def change_mode(self, new_mode: str) -> None:
+        """Switch activation mode (push_to_talk ↔ toggle).
+
+        Updates the listener's mode and callbacks without unregistering
+        the hotkey. CarbonHotkeyListener always listens for both PRESSED
+        and RELEASED events — we only need to update which callbacks
+        are invoked and how the listener routes them.
+        """
+        old_mode = self._config.mode
+        if old_mode == new_mode:
+            return
+
+        self._config = self._config.model_copy(update={"mode": new_mode})
+
+        # Update listener mode (CarbonHotkeyListener.set_mode)
+        if hasattr(self._hotkey_listener, "set_mode"):
+            self._hotkey_listener.set_mode(new_mode)
+
+        # Update callbacks on the existing registration without re-registering.
+        # Re-registering (unregister+register) can cause Carbon errors.
+        hotkey = self._config.hotkey
+        deactivate = self._on_hotkey_up if new_mode == "push_to_talk" else None
+
+        # Access the internal registration and update callbacks directly
+        if hasattr(self._hotkey_listener, "_registrations"):
+            reg = self._hotkey_listener._registrations.get(hotkey)
+            if reg is not None:
+                # Update the on_deactivate callback in-place
+                reg.on_deactivate = deactivate
+                logger.info(f"Mode changed: {old_mode} -> {new_mode} (callbacks updated)")
+                return
+
+        # Fallback: if we can't access registrations, re-register
+        logger.warning("Cannot update callbacks in-place, re-registering hotkey")
+        try:
+            self._hotkey_listener.unregister(hotkey)
+        except Exception as exc:
+            logger.error(f"Failed to unregister hotkey for mode change: {exc}")
+
+        try:
+            self._hotkey_listener.register(
+                hotkey,
+                on_activate=self._on_hotkey_down,
+                on_deactivate=deactivate,
+            )
+            logger.info(f"Mode changed: {old_mode} -> {new_mode}")
+        except Exception as exc:
+            logger.error(f"Failed to register hotkey for mode change: {exc}")
+
     def wait_for_idle(self, timeout: float = 5.0) -> bool:
         """Block until the state machine returns to IDLE or timeout expires."""
         import time

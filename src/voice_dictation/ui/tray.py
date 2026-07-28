@@ -273,6 +273,9 @@ class TrayIcon:
 
     def _on_model_change(self, model: str) -> None:
         """Handle model menu change."""
+        # pystray may pass a MenuItem object instead of a string
+        if not isinstance(model, str):
+            model = getattr(model, "text", None) or getattr(model, "label", None) or str(model)
         try:
             self._config = self._config.model_copy(update={"whisper_model": model})
             if self._app:
@@ -285,6 +288,9 @@ class TrayIcon:
 
     def _on_language_change(self, lang: str) -> None:
         """Handle language menu change."""
+        # pystray may pass a MenuItem object instead of a string
+        if not isinstance(lang, str):
+            lang = getattr(lang, "text", None) or getattr(lang, "label", None) or str(lang)
         try:
             self._config = self._config.model_copy(update={"language": lang})
             if self._app:
@@ -295,12 +301,35 @@ class TrayIcon:
 
     def _on_mode_change(self, mode: str) -> None:
         """Handle mode menu change."""
+        # pystray may pass a MenuItem object instead of a string
+        if not isinstance(mode, str):
+            # Try to extract the text from MenuItem
+            if hasattr(mode, "text"):
+                mode = mode.text
+            elif hasattr(mode, "label"):
+                mode = mode.label
+            else:
+                mode = str(mode)
         try:
             self._config = self._config.model_copy(update={"mode": mode})
             if self._app:
                 self._app._config = self._config
-                if self._app._hotkey_listener:
-                    logger.info(f"Mode changed to '{mode}' — hotkey listener may need restart")
+                if self._app._pipeline is not None:
+                    self._app._pipeline.change_mode(mode)
+            # Persist to config file
+            try:
+                from voice_dictation.config.manager import ConfigManager
+                ConfigManager().save(self._config)
+            except Exception as exc:
+                logger.warning(f"Failed to save mode change to config: {exc}")
+            # Refresh tray menu so radio button updates
+            if self._icon is not None:
+                try:
+                    # Recreate menu so checked lambdas re-evaluate
+                    self._icon.menu = self._create_menu()
+                    self._icon.update_menu()
+                except Exception as exc:
+                    logger.debug(f"Menu update failed: {exc}")
             logger.info(f"Mode changed to '{mode}'")
         except Exception as exc:
             logger.error(f"Failed to change mode: {exc}")
