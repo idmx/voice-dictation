@@ -372,6 +372,9 @@ class CarbonHotkeyListener(HotkeyListener):
             callback = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(lambda _: block())
             # Keep reference alive to prevent GC
             CarbonHotkeyListener._pending_callbacks.append(callback)
+            # Prevent unbounded growth — keep only recent callbacks
+            if len(CarbonHotkeyListener._pending_callbacks) > 10:
+                CarbonHotkeyListener._pending_callbacks = CarbonHotkeyListener._pending_callbacks[-5:]
 
             dispatch_async_f(dispatch_get_main_queue(), None, callback)
         except Exception as e:
@@ -486,6 +489,7 @@ class CarbonHotkeyListener(HotkeyListener):
 
         self._event_handler_ref = 0
         self._callback_ref = None
+        CarbonHotkeyListener._pending_callbacks.clear()
         self._target = 0
 
     # ------------------------------------------------------------------

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import threading
 from pathlib import Path
@@ -301,7 +302,7 @@ class TrayIcon:
             if sys.platform == "darwin":
                 subprocess.Popen(["open", str(config_path)])
             elif sys.platform == "win32":
-                subprocess.Popen(["start", str(config_path)], shell=True)
+                os.startfile(str(config_path))
             else:
                 subprocess.Popen(["xdg-open", str(config_path)])
         except Exception as exc:

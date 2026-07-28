@@ -92,6 +92,7 @@ class ClipboardManager:
 
     @staticmethod
     def _write_clipboard_macos(text: str) -> None:
+        proc = None
         try:
             env = {**os.environ, "LANG": "en_US.UTF-8"}
             proc = subprocess.Popen(
@@ -103,6 +104,9 @@ class ClipboardManager:
             if proc.returncode != 0:
                 raise ClipboardError(f"pbcopy failed with code {proc.returncode}")
         except subprocess.TimeoutExpired as e:
+            if proc is not None:
+                proc.kill()
+                proc.communicate()
             raise ClipboardError(f"pbcopy timed out: {e}") from e
         except FileNotFoundError as e:
             raise ClipboardError(f"pbcopy not found: {e}") from e
@@ -185,6 +189,7 @@ class ClipboardManager:
             fallback_dir.mkdir(parents=True, exist_ok=True)
             fallback_file = fallback_dir / "clipboard_backup.txt"
             fallback_file.write_text(self._saved_text, encoding="utf-8")
+            os.chmod(fallback_file, 0o600)
             logger.info(f"Clipboard content saved to fallback file: {fallback_file}")
         except Exception as e:
             logger.error(f"Failed to save clipboard to fallback file: {e}")

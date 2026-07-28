@@ -59,4 +59,17 @@ class AppConfig(BaseModel):
             raise ValueError("Language code must be at least 2 characters")
         return v.lower()
 
+    @field_validator("model_cache_dir")
+    @classmethod
+    def validate_model_cache_dir(cls, v: str) -> str:
+        from pathlib import Path
+
+        expanded = Path(v).expanduser().resolve()
+        allowed = Path.home() / ".voice-dictation"
+        if not str(expanded).startswith(str(allowed.resolve())):
+            raise ValueError(
+                f"model_cache_dir must be under ~/.voice-dictation/, got '{v}'"
+            )
+        return v
+
     model_config = {"extra": "ignore"}

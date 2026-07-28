@@ -276,6 +276,7 @@ class MacOSTextInjector(TextInjector):
 
     @staticmethod
     def _write_clipboard(text: str) -> None:
+        proc = None
         try:
             env = {**os.environ, "LANG": "en_US.UTF-8"}
             proc = subprocess.Popen(
@@ -289,6 +290,9 @@ class MacOSTextInjector(TextInjector):
         except FileNotFoundError as exc:
             raise InjectionError(f"pbcopy not found: {exc}") from exc
         except subprocess.TimeoutExpired as exc:
+            if proc is not None:
+                proc.kill()
+                proc.communicate()
             raise InjectionError(f"pbcopy timed out: {exc}") from exc
 
     @staticmethod

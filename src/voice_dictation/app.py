@@ -353,10 +353,6 @@ class Application:
 
         logger.info("Voice Dictation stopped")
 
-        import os
-
-        os._exit(0)
-
     # ------------------------------------------------------------------
     # Config reload
     # ------------------------------------------------------------------

@@ -28,7 +28,13 @@ def main() -> None:
         app.shutdown()
     finally:
         single_instance.release()
-        threading.Timer(3.0, lambda: os._exit(0)).start()
+        # Safety net: if sys.exit(0) doesn't terminate the process
+        # within 5 seconds (e.g. lingering non-daemon threads),
+        # force-terminate.  The timer starts HERE — after app.run()
+        # has returned and cleanup is done.
+        _exit_timer = threading.Timer(5.0, lambda: os._exit(0))
+        _exit_timer.daemon = True
+        _exit_timer.start()
         sys.exit(0)
 
 

@@ -78,11 +78,13 @@ class DictationPipeline:
 
     def start(self) -> None:
         """Register hotkey and start listening."""
-        # Recreate executor if it was previously shut down
+        # Shutdown old executor if it was previously used
         if self._executor._shutdown:
+            old_executor = self._executor
             self._executor = ThreadPoolExecutor(
                 max_workers=1, thread_name_prefix="transcribe"
             )
+            old_executor.shutdown(wait=False)
         deactivate = self._on_hotkey_up if self._config.mode == "push_to_talk" else None
         self._hotkey_listener.register(
             self._config.hotkey,
