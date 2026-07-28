@@ -24,7 +24,19 @@ echo "Installing PyInstaller into venv..."
 $PYTHON -m pip install --quiet "pyinstaller>=6.0"
 
 # Clean previous builds
-rm -rf build dist
+rm -rf build dist 2>/dev/null || true
+# If dist still exists (locked files), force remove
+if [ -d "dist" ] || [ -d "build" ]; then
+    find dist build -name '.DS_Store' -delete 2>/dev/null || true
+    xattr -cr dist build 2>/dev/null || true
+    chmod -R u+w dist build 2>/dev/null || true
+    rm -rf build dist 2>/dev/null || true
+fi
+# Last resort: move aside if still stuck
+if [ -d "dist" ]; then
+    mv dist dist_old_$$ 2>/dev/null || true
+    rm -rf dist_old_$$ 2>/dev/null &
+fi
 
 # Build with venv Python (includes all dependencies)
 echo "Running PyInstaller..."

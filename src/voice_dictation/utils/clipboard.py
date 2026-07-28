@@ -1,5 +1,6 @@
 """Cross-platform clipboard save/restore."""
 
+import os
 import subprocess
 from pathlib import Path
 
@@ -72,14 +73,19 @@ class ClipboardManager:
     @staticmethod
     def _read_clipboard_macos() -> str | None:
         try:
+            # Use binary mode to avoid UnicodeDecodeError when clipboard
+            # contains non-UTF-8 data (images, files, etc.)
             result = subprocess.run(
                 ["pbpaste"],
                 capture_output=True,
-                text=True,
                 timeout=5,
             )
             if result.returncode == 0:
-                return result.stdout
+                try:
+                    return result.stdout.decode("utf-8")
+                except UnicodeDecodeError:
+                    logger.debug("Clipboard contains non-text data, treating as empty")
+                    return ""
             return None
         except (subprocess.TimeoutExpired, FileNotFoundError) as e:
             raise ClipboardError(f"Failed to read macOS clipboard: {e}") from e
@@ -87,15 +93,15 @@ class ClipboardManager:
     @staticmethod
     def _write_clipboard_macos(text: str) -> None:
         try:
-            result = subprocess.run(
+            env = {**os.environ, "LANG": "en_US.UTF-8"}
+            proc = subprocess.Popen(
                 ["pbcopy"],
-                input=text,
-                capture_output=True,
-                text=True,
-                timeout=5,
+                env=env,
+                stdin=subprocess.PIPE,
             )
-            if result.returncode != 0:
-                raise ClipboardError(f"pbcopy failed with code {result.returncode}")
+            proc.communicate(input=text.encode("utf-8"), timeout=5)
+            if proc.returncode != 0:
+                raise ClipboardError(f"pbcopy failed with code {proc.returncode}")
         except subprocess.TimeoutExpired as e:
             raise ClipboardError(f"pbcopy timed out: {e}") from e
         except FileNotFoundError as e:

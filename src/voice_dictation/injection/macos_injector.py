@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import time
 from typing import Any
@@ -135,12 +136,16 @@ class MacOSTextInjector(TextInjector):
         Returns True if paste likely succeeded, False otherwise.
         """
         # Try AppleScript (requires Accessibility for osascript)
+        # Use "key code 9" instead of keystroke "v" to avoid layout issues:
+        # keystroke "v" sends the letter v from the CURRENT keyboard layout,
+        # which is "м" in Russian layout — resulting in Cmd+М instead of Cmd+V.
+        # Key code 9 always refers to the physical V key regardless of layout.
         try:
             result = subprocess.run(
                 [
                     "osascript",
                     "-e",
-                    'tell application "System Events" to keystroke "v" using command down',
+                    'tell application "System Events" to key code 9 using command down',
                 ],
                 capture_output=True,
                 text=True,
@@ -220,15 +225,15 @@ class MacOSTextInjector(TextInjector):
     @staticmethod
     def _write_clipboard(text: str) -> None:
         try:
-            result = subprocess.run(
+            env = {**os.environ, "LANG": "en_US.UTF-8"}
+            proc = subprocess.Popen(
                 ["pbcopy"],
-                input=text,
-                capture_output=True,
-                text=True,
-                timeout=5,
+                env=env,
+                stdin=subprocess.PIPE,
             )
-            if result.returncode != 0:
-                raise InjectionError(f"pbcopy failed with code {result.returncode}")
+            proc.communicate(input=text.encode("utf-8"), timeout=5)
+            if proc.returncode != 0:
+                raise InjectionError(f"pbcopy failed with code {proc.returncode}")
         except FileNotFoundError as exc:
             raise InjectionError(f"pbcopy not found: {exc}") from exc
         except subprocess.TimeoutExpired as exc:

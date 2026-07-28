@@ -8,8 +8,20 @@ import pytest
 from voice_dictation.utils.clipboard import ClipboardManager
 
 
-def make_completed_process(stdout: str = "", returncode: int = 0) -> subprocess.CompletedProcess:
-    return subprocess.CompletedProcess(args=[], returncode=returncode, stdout=stdout, stderr="")
+def make_completed_process(stdout: str | bytes = "", returncode: int = 0) -> subprocess.CompletedProcess:
+    # _read_clipboard_macos uses binary mode (no text=True),
+    # so stdout must be bytes
+    if isinstance(stdout, str):
+        stdout = stdout.encode("utf-8")
+    return subprocess.CompletedProcess(args=[], returncode=returncode, stdout=stdout, stderr=b"")
+
+
+def make_mock_popen(returncode: int = 0) -> MagicMock:
+    """Create a mock for subprocess.Popen used by _write_clipboard_macos."""
+    mock = MagicMock()
+    mock.communicate.return_value = (None, None)
+    mock.returncode = returncode
+    return mock
 
 
 def macos_patches():
@@ -96,6 +108,7 @@ class TestRestoreClipboardText:
 
     def test_restore_clipboard_text(self) -> None:
         cm = ClipboardManager()
+        mock_popen = make_mock_popen()
         p_mac, p_win = macos_patches()
         with (
             p_mac,
@@ -103,6 +116,10 @@ class TestRestoreClipboardText:
             patch(
                 "voice_dictation.utils.clipboard.subprocess.run",
                 return_value=make_completed_process("original text"),
+            ),
+            patch(
+                "voice_dictation.utils.clipboard.subprocess.Popen",
+                mock_popen,
             ),
         ):
             cm.save()
@@ -114,10 +131,14 @@ class TestRestoreClipboardText:
             patch(
                 "voice_dictation.utils.clipboard.subprocess.run",
                 return_value=make_completed_process(),
-            ) as mock_run,
+            ),
+            patch(
+                "voice_dictation.utils.clipboard.subprocess.Popen",
+                mock_popen,
+            ),
         ):
             cm.restore()
-            assert mock_run.called
+            assert mock_popen.called
 
     def test_restore_when_nothing_saved(self) -> None:
         cm = ClipboardManager()
@@ -131,6 +152,7 @@ class TestRestoreClipboardImage:
 
     def test_restore_clipboard_image(self) -> None:
         cm = ClipboardManager()
+        mock_popen = make_mock_popen()
         p_mac, p_win = macos_patches()
         with (
             p_mac,
@@ -138,6 +160,10 @@ class TestRestoreClipboardImage:
             patch(
                 "voice_dictation.utils.clipboard.subprocess.run",
                 return_value=make_completed_process(""),
+            ),
+            patch(
+                "voice_dictation.utils.clipboard.subprocess.Popen",
+                mock_popen,
             ),
         ):
             cm.save()
@@ -150,6 +176,10 @@ class TestRestoreClipboardImage:
                 "voice_dictation.utils.clipboard.subprocess.run",
                 return_value=make_completed_process(),
             ),
+            patch(
+                "voice_dictation.utils.clipboard.subprocess.Popen",
+                mock_popen,
+            ),
         ):
             cm.restore()
 
@@ -159,6 +189,8 @@ class TestRestoreAfterTimeout:
 
     def test_restore_after_timeout(self) -> None:
         cm = ClipboardManager()
+        mock_popen = make_mock_popen()
+        mock_popen.communicate.side_effect = subprocess.TimeoutExpired(cmd=["pbcopy"], timeout=5)
         p_mac, p_win = macos_patches()
         with (
             p_mac,
@@ -166,6 +198,10 @@ class TestRestoreAfterTimeout:
             patch(
                 "voice_dictation.utils.clipboard.subprocess.run",
                 return_value=make_completed_process("data"),
+            ),
+            patch(
+                "voice_dictation.utils.clipboard.subprocess.Popen",
+                mock_popen,
             ),
         ):
             cm.save()
@@ -176,7 +212,11 @@ class TestRestoreAfterTimeout:
             p_win2,
             patch(
                 "voice_dictation.utils.clipboard.subprocess.run",
-                side_effect=subprocess.TimeoutExpired(cmd=["pbcopy"], timeout=5),
+                return_value=make_completed_process(),
+            ),
+            patch(
+                "voice_dictation.utils.clipboard.subprocess.Popen",
+                mock_popen,
             ),
         ):
             cm.restore()
@@ -187,6 +227,7 @@ class TestConcurrentClipboardAccess:
 
     def test_concurrent_clipboard_access(self) -> None:
         cm = ClipboardManager()
+        mock_popen = make_mock_popen()
         p_mac, p_win = macos_patches()
         with (
             p_mac,
@@ -194,6 +235,10 @@ class TestConcurrentClipboardAccess:
             patch(
                 "voice_dictation.utils.clipboard.subprocess.run",
                 return_value=make_completed_process("first"),
+            ),
+            patch(
+                "voice_dictation.utils.clipboard.subprocess.Popen",
+                mock_popen,
             ),
         ):
             cm.save()
@@ -206,6 +251,10 @@ class TestConcurrentClipboardAccess:
                 "voice_dictation.utils.clipboard.subprocess.run",
                 side_effect=[make_completed_process("changed by other app")],
             ),
+            patch(
+                "voice_dictation.utils.clipboard.subprocess.Popen",
+                mock_popen,
+            ),
         ):
             cm.restore()
 
@@ -215,14 +264,27 @@ class TestClipboardSaveRestoreRoundtrip:
 
     def test_clipboard_save_restore_roundtrip(self) -> None:
         cm = ClipboardManager()
-        written: list[str] = []
+        written: list[bytes] = []
+
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_proc.communicate.return_value = (None, None)
+
+        def popen_factory(*args, **kwargs):
+            # Track input passed to communicate
+            original_communicate = mock_proc.communicate
+
+            def tracking_communicate(*cargs, **ckwargs):
+                input_data = ckwargs.get("input", cargs[0] if cargs else b"")
+                written.append(input_data)
+                return (None, None)
+
+            mock_proc.communicate = tracking_communicate
+            return mock_proc
 
         def mock_run(args, **kwargs):
             if "pbpaste" in args:
                 return make_completed_process("original content")
-            if "pbcopy" in args:
-                written.append(kwargs.get("input", ""))
-                return make_completed_process()
             return make_completed_process()
 
         p_mac, p_win = macos_patches()
@@ -245,10 +307,14 @@ class TestClipboardSaveRestoreRoundtrip:
                 "voice_dictation.utils.clipboard.subprocess.run",
                 side_effect=mock_run,
             ),
+            patch(
+                "voice_dictation.utils.clipboard.subprocess.Popen",
+                side_effect=popen_factory,
+            ),
         ):
             cm.restore()
 
-        assert "original content" in written
+        assert b"original content" in written
 
 
 class TestClipboardErrorHandling:

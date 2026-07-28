@@ -54,18 +54,29 @@ class TestClipboardInject:
     ) -> None:
         mock_cm = MagicMock()
         injector._clipboard = mock_cm
+        mock_proc = MagicMock()
+        mock_proc.communicate.return_value = (None, None)
+        mock_proc.returncode = 0
         with (
+            patch(
+                "voice_dictation.injection.macos_injector.subprocess.Popen",
+                return_value=mock_proc,
+            ),
             patch(
                 "voice_dictation.injection.macos_injector.subprocess.run",
                 return_value=make_completed_process(),
-            ) as mock_run,
+            ),
             patch.object(MacOSTextInjector, "_simulate_cmd_v"),
             patch.dict("sys.modules", {"Quartz": mock_quartz}),
         ):
             injector.inject("test text")
-        calls = mock_run.call_args_list
-        written_inputs = [c.kwargs.get("input", "") for c in calls if "pbcopy" in c.args[0]]
-        assert "test text" in written_inputs
+        # Verify Popen was called with pbcopy
+        from unittest.mock import call
+        popen_calls = mock_popen_instance_calls = []
+        # Check communicate was called with UTF-8 encoded text
+        comm_calls = mock_proc.communicate.call_args_list
+        written_inputs = [c.kwargs.get("input", c.args[0] if c.args else b"") for c in comm_calls]
+        assert b"test text" in written_inputs
 
     def test_clipboard_inject_simulates_cmd_v(
         self, injector: MacOSTextInjector, mock_quartz: MagicMock
