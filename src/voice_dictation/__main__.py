@@ -1,6 +1,8 @@
 """Entry point for voice-dictation."""
 
+import os
 import sys
+import threading
 
 from loguru import logger
 
@@ -26,6 +28,7 @@ def main() -> None:
         app.shutdown()
     finally:
         single_instance.release()
+        threading.Timer(3.0, lambda: os._exit(0)).start()
         sys.exit(0)
 
 

@@ -164,6 +164,9 @@ if _CARBON_AVAILABLE:
     _lib.UnregisterEventHotKey.argtypes = [ctypes.c_void_p]
     _lib.UnregisterEventHotKey.restype = ctypes.c_int
 
+    _lib.RemoveEventHandler.argtypes = [ctypes.c_void_p]
+    _lib.RemoveEventHandler.restype = ctypes.c_int
+
     _lib.GetEventKind.argtypes = [ctypes.c_void_p]
     _lib.GetEventKind.restype = ctypes.c_uint32
 
@@ -473,8 +476,14 @@ class CarbonHotkeyListener(HotkeyListener):
                     logger.error(f"Error unregistering hotkey: {e}")
                 reg.ref = 0
 
-        # Note: there's no RemoveEventHandler in our ctypes setup,
-        # but the handler is harmless once hotkeys are unregistered.
+        # Remove the Carbon event handler to stop receiving events
+        if self._event_handler_ref != 0 and _CARBON_AVAILABLE:
+            try:
+                _lib.RemoveEventHandler(self._event_handler_ref)
+                logger.debug("Carbon event handler removed")
+            except Exception as e:
+                logger.debug(f"Error removing event handler: {e}")
+
         self._event_handler_ref = 0
         self._callback_ref = None
         self._target = 0
