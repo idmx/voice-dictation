@@ -14,6 +14,7 @@ State flow::
 from __future__ import annotations
 
 import threading
+import time
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 
@@ -28,6 +29,9 @@ from voice_dictation.injection.base import TextInjector
 from voice_dictation.recognition.base import RecognitionEngine
 
 SILENCE_THRESHOLD = 100
+# Maximum recording duration in seconds — safety timeout to prevent
+# runaway recording if a key-up event is lost by the OS.
+_DEFAULT_MAX_RECORDING_SECONDS = 30
 
 
 class DictationPipeline:
@@ -57,6 +61,10 @@ class DictationPipeline:
         self._pipeline_lock = threading.Lock()
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="transcribe")
         self._error_callbacks: list[Callable[[Exception, str], None]] = []
+
+        # Safety timeout: if key-up is lost, force-stop recording after N seconds.
+        self._recording_timer: threading.Timer | None = None
+        self._recording_start_time: float = 0.0
 
         self._state_machine.on_transition(self._on_state_changed)
 
@@ -136,6 +144,7 @@ class DictationPipeline:
 
             try:
                 self._audio_capture.start()
+                self._start_recording_timer()
                 logger.info("Recording started")
             except Exception as exc:
                 self._handle_error(exc, "audio_start")
@@ -154,6 +163,7 @@ class DictationPipeline:
 
     def _stop_and_process(self) -> None:
         """Stop audio capture and submit the audio for transcription."""
+        self._cancel_recording_timer()
         try:
             audio_data = self._audio_capture.stop()
             logger.info("Recording stopped")
@@ -174,6 +184,61 @@ class DictationPipeline:
     def _is_silence(self, audio: np.ndarray) -> bool:
         """Return True if audio is effectively silence."""
         return bool(np.max(np.abs(audio)) < SILENCE_THRESHOLD)
+
+    # ------------------------------------------------------------------
+    # Safety recording timeout
+    # ------------------------------------------------------------------
+
+    def _start_recording_timer(self) -> None:
+        """Start a safety timer that force-stops recording after max_recording_seconds.
+
+        If the OS loses the key-up event, the recording would hang forever.
+        This timer ensures recording stops automatically.
+        """
+        self._cancel_recording_timer()
+        self._recording_start_time = time.monotonic()
+        timeout = getattr(self._config, "max_recording_seconds", _DEFAULT_MAX_RECORDING_SECONDS)
+        self._recording_timer = threading.Timer(
+            timeout, self._on_recording_timeout
+        )
+        self._recording_timer.daemon = True
+        self._recording_timer.start()
+
+    def _cancel_recording_timer(self) -> None:
+        """Cancel the safety recording timer if it is running."""
+        if self._recording_timer is not None:
+            self._recording_timer.cancel()
+            self._recording_timer = None
+
+    def _on_recording_timeout(self) -> None:
+        """Force-stop recording when the safety timeout fires.
+
+        This runs on the Timer thread.  We acquire the pipeline lock,
+        stop audio capture if still recording, and return to IDLE.
+        """
+        timeout = getattr(self._config, "max_recording_seconds", _DEFAULT_MAX_RECORDING_SECONDS)
+        logger.warning(
+            f"Recording safety timeout after {timeout}s — forcing stop"
+        )
+        with self._pipeline_lock:
+            if self._state_machine.state != State.RECORDING:
+                return
+            try:
+                audio_data = self._audio_capture.stop()
+                logger.info("Recording force-stopped by safety timer")
+            except Exception as exc:
+                self._handle_error(exc, "audio_timeout_stop")
+                return
+
+            if not self._state_machine.transition(State.TRANSCRIBING):
+                return
+
+            if audio_data is None or audio_data.size == 0 or self._is_silence(audio_data):
+                logger.info("Safety timeout: silent/empty audio — skipping")
+                self._state_machine.force_idle()
+                return
+
+            self._submit_transcription(audio_data)
 
     # ------------------------------------------------------------------
     # Transcription / injection (runs in worker thread)

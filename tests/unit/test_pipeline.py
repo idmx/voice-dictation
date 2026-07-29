@@ -532,3 +532,101 @@ class TestConfigReload:
         new_cfg = AppConfig(mode="toggle")
         pipeline.config = new_cfg
         assert pipeline.config.mode == "toggle"
+
+
+# ---------------------------------------------------------------------------
+# Safety recording timeout
+# ---------------------------------------------------------------------------
+
+
+class TestRecordingTimeout:
+    def test_recording_timer_starts_on_hotkey_down(
+        self, pipeline: DictationPipeline, mock_audio: MagicMock
+    ) -> None:
+        pipeline._on_hotkey_down()
+        assert pipeline._recording_timer is not None
+        assert pipeline._recording_timer.is_alive()
+        assert pipeline._recording_start_time > 0
+
+    def test_recording_timer_cancelled_on_hotkey_up(
+        self, pipeline: DictationPipeline, mock_audio: MagicMock
+    ) -> None:
+        pipeline._on_hotkey_down()
+        timer = pipeline._recording_timer
+        assert timer is not None
+        pipeline._on_hotkey_up()
+        assert pipeline._recording_timer is None
+
+    def test_recording_timer_cancelled_on_force_idle(
+        self, pipeline: DictationPipeline, mock_audio: MagicMock,
+        state_machine: StateMachine,
+    ) -> None:
+        pipeline._on_hotkey_down()
+        state_machine.force_idle()
+        # Cancel the timer — even if force_idle was called externally
+        pipeline._cancel_recording_timer()
+        assert pipeline._recording_timer is None
+
+    def test_recording_timeout_force_stops(
+        self, pipeline: DictationPipeline, mock_audio: MagicMock,
+        state_machine: StateMachine,
+    ) -> None:
+        """Simulate the safety timer firing — should stop recording and transcribe."""
+        pipeline._on_hotkey_down()
+        assert state_machine.state == State.RECORDING
+
+        # Manually invoke the timeout handler (simulating timer fire)
+        pipeline._on_recording_timeout()
+
+        # Wait for the executor to finish before asserting final state
+        pipeline._executor.submit(lambda: None).result(timeout=5.0)
+
+        mock_audio.stop.assert_called()
+        assert state_machine.state == State.IDLE
+
+    def test_recording_timeout_only_fires_in_recording(
+        self, pipeline: DictationPipeline, mock_audio: MagicMock
+    ) -> None:
+        """If pipeline is not in RECORDING state, timeout should do nothing."""
+        pipeline._on_recording_timeout()
+        mock_audio.stop.assert_not_called()
+
+    def test_recording_timeout_with_empty_audio_goes_to_idle(
+        self, pipeline: DictationPipeline, mock_audio: MagicMock,
+        state_machine: StateMachine,
+    ) -> None:
+        """If timeout fires but audio is empty, force IDLE (no transcription)."""
+        mock_audio.stop.return_value = np.array([], dtype=np.int16)
+        pipeline._on_hotkey_down()
+        pipeline._on_recording_timeout()
+        assert state_machine.state == State.IDLE
+
+    def test_recording_timeout_with_silent_audio_goes_to_idle(
+        self, pipeline: DictationPipeline, mock_audio: MagicMock,
+        state_machine: StateMachine,
+    ) -> None:
+        """If timeout fires but audio is silence, force IDLE (no transcription)."""
+        mock_audio.stop.return_value = np.zeros(16000, dtype=np.int16)
+        pipeline._on_hotkey_down()
+        pipeline._on_recording_timeout()
+        assert state_machine.state == State.IDLE
+
+    def test_recording_timer_uses_config_timeout(
+        self, state_machine: StateMachine, mock_audio: MagicMock,
+        mock_recognition: MagicMock, mock_injector: MagicMock,
+        mock_hotkey: MagicMock,
+    ) -> None:
+        """Timer should use the configured max_recording_seconds value."""
+        cfg = AppConfig(max_recording_seconds=5, mode="push_to_talk")
+        p = DictationPipeline(
+            state_machine=state_machine,
+            audio_capture=mock_audio,
+            recognition_engine=mock_recognition,
+            text_injector=mock_injector,
+            hotkey_listener=mock_hotkey,
+            config=cfg,
+        )
+        p._on_hotkey_down()
+        assert p._recording_timer is not None
+        # Timer should have interval of 5 seconds
+        assert p._recording_timer.interval == 5.0

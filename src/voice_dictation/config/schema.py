@@ -43,6 +43,10 @@ class AppConfig(BaseModel):
     beam_size: Literal[1, 3, 5] = Field(
         default=5, description="Beam size: 1=fast, 3=balanced, 5=accurate"
     )
+    max_recording_seconds: int = Field(
+        default=30, ge=5, le=300,
+        description="Safety timeout: force-stop recording after N seconds if key-up is lost",
+    )
     model_cache_dir: str = Field(
         default="~/.voice-dictation/models", description="Model cache directory"
     )

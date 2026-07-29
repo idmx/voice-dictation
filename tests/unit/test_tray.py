@@ -184,6 +184,30 @@ class TestTrayMenuBeamSizeSwitch:
         assert tray._config.beam_size == 1
 
 
+class TestTrayMenuRecordingTimeout:
+    def test_menu_timeout_change(self, config, mock_app) -> None:
+        tray = TrayIcon(config, app=mock_app)
+        tray._on_recording_timeout_change(60)
+        assert tray._config.max_recording_seconds == 60
+        assert mock_app._config.max_recording_seconds == 60
+
+    def test_menu_timeout_updates_pipeline_config(self, config, mock_app) -> None:
+        mock_app._pipeline = MagicMock()
+        tray = TrayIcon(config, app=mock_app)
+        tray._on_recording_timeout_change(120)
+        assert mock_app._pipeline.config.max_recording_seconds == 120
+
+    def test_menu_timeout_no_app(self, config) -> None:
+        tray = TrayIcon(config)
+        tray._on_recording_timeout_change(15)
+        assert tray._config.max_recording_seconds == 15
+
+    def test_menu_timeout_persists(self, config, mock_app) -> None:
+        tray = TrayIcon(config, app=mock_app)
+        tray._on_recording_timeout_change(300)
+        assert tray._config.max_recording_seconds == 300
+
+
 class TestTrayTooltip:
     @patch.object(TrayIcon, "_load_icon")
     def test_status_text_updates(self, mock_load, tray) -> None:

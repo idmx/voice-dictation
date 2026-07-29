@@ -44,6 +44,14 @@ _AVAILABLE_BEAM_SIZES: list[tuple[str, int]] = [
     ("Баланс (3)", 3),
     ("Точно (5)", 5),
 ]
+# max_recording_seconds menu: (label, value)
+_AVAILABLE_RECORDING_TIMEOUTS: list[tuple[str, int]] = [
+    ("15 сек", 15),
+    ("30 сек", 30),
+    ("1 мин", 60),
+    ("2 мин", 120),
+    ("5 мин", 300),
+]
 
 
 class TrayIcon:
@@ -286,6 +294,20 @@ class TrayIcon:
                     )
                 ),
             ),
+            pystray.MenuItem(
+                "Макс. запись",
+                pystray.Menu(
+                    *(
+                        pystray.MenuItem(
+                            label,
+                            lambda *_, v=val: self._on_recording_timeout_change(v),
+                            checked=lambda *_, v=val: self._config.max_recording_seconds == v,
+                            radio=True,
+                        )
+                        for label, val in _AVAILABLE_RECORDING_TIMEOUTS
+                    )
+                ),
+            ),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem(
                 "Автопунктуация",
@@ -449,6 +471,21 @@ class TrayIcon:
             logger.info(f"Beam size changed to {beam_size}")
         except Exception as exc:
             logger.error(f"Failed to change beam size: {exc}")
+
+    def _on_recording_timeout_change(self, seconds: int) -> None:
+        """Handle max recording timeout change — updates pipeline safety timer interval."""
+        try:
+            self._config = self._config.model_copy(update={"max_recording_seconds": seconds})
+            if self._app:
+                self._app._config = self._config
+                # Update pipeline config — the timer will use the new value
+                # on the next recording
+                if self._app._pipeline is not None:
+                    self._app._pipeline.config = self._config
+            self._persist_and_refresh_menu()
+            logger.info(f"Max recording timeout changed to {seconds}s")
+        except Exception as exc:
+            logger.error(f"Failed to change recording timeout: {exc}")
 
     def _on_auto_punctuation_toggle(self) -> None:
         """Toggle auto-punctuation on/off."""
