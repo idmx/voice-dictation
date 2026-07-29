@@ -4,7 +4,7 @@ import time
 from pathlib import Path
 
 from voice_dictation.config.manager import ConfigManager
-from voice_dictation.config.schema import AppConfig
+from voice_dictation.config.schema import AppConfig, _default_hotkey
 
 
 class TestHotkeyChangeApplied:
@@ -45,7 +45,7 @@ class TestHotkeyChangeApplied:
 
             assert len(received) >= 1
             old_cfg, new_cfg = received[0]
-            assert old_cfg.hotkey == "cmd+shift+1"
+            assert old_cfg.hotkey == _default_hotkey()
             assert new_cfg.hotkey == "ctrl+alt+f1"
         finally:
             manager.stop_watching()

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import threading
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import numpy as np
@@ -209,6 +210,8 @@ class TestModelLifecycle:
         mock_model_cls.side_effect = RuntimeError("load failed")
         with (
             patch.object(engine._model_manager, "is_model_cached", return_value=True),
+            patch.object(engine._model_manager, "verify_model", return_value=True),
+            patch.object(engine.__class__, "_find_model_dir", return_value=Path("/tmp/fake-model")),
             pytest.raises(ModelLoadError),
         ):
             engine.load()

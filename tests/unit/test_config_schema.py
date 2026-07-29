@@ -3,14 +3,14 @@
 import pytest
 from pydantic import ValidationError
 
-from voice_dictation.config.schema import AppConfig
+from voice_dictation.config.schema import AppConfig, _default_hotkey
 
 
 class TestAppConfig:
     """Tests for the AppConfig schema."""
 
     def test_default_config(self, default_config: AppConfig) -> None:
-        assert default_config.hotkey == "cmd+shift+1"
+        assert default_config.hotkey == _default_hotkey()
         assert default_config.mode == "push_to_talk"
         assert default_config.whisper_model == "base"
         assert default_config.language == "ru"

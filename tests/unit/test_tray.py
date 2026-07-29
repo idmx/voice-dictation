@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -94,7 +95,9 @@ class TestTrayMenuSettings:
         mock_expanded.__truediv__ = lambda self, other: mock_config_path
         mock_path_cls.return_value.expanduser.return_value = mock_expanded
 
-        tray._on_open_settings()
+        # Force macOS branch regardless of actual platform
+        with patch.object(sys, "platform", "darwin"):
+            tray._on_open_settings()
         mock_popen.assert_called_once()
 
 
@@ -157,34 +160,12 @@ class TestTrayMenuBeamSizeSwitch:
         assert tray._config.beam_size == 1
 
     def test_menu_beam_size_lambda_passes_correct_value(self, config, mock_app) -> None:
-        """Simulate pystray calling the lambda with (icon, item) args.
-
-        The lambda uses *_ to absorb positional args, so the captured
-        default value must be used, not any positional argument.
-        """
-
+        """Verify the beam_size handler correctly updates config and engine."""
         tray = TrayIcon(config, app=mock_app)
-        tray._create_menu()
-
-        # Find the "Качество" submenu and click "Быстро (1)"
-        # Menu items: [status, SEP, Модель, Язык, Режим, Качество, ...]
-        # Walk the menu to find beam size items
-        from voice_dictation.ui.tray import _AVAILABLE_BEAM_SIZES
-
-        for _label, val in _AVAILABLE_BEAM_SIZES:
-            if val == 1:
-                # Simulate: the lambda is called by pystray with (icon, item)
-                # We verify the lambda captures the right value
-                pass
-            if val == 1:
-                # Simulate: the lambda is called by pystray with (icon, item)
-                # We verify the lambda captures the right value
-                pass
-
-        # Directly verify the lambdas in the menu work with extra args
-        # by calling _on_beam_size_change with the expected int
         tray._on_beam_size_change(1)
         assert tray._config.beam_size == 1
+        assert mock_app._config.beam_size == 1
+        mock_app._recognition_engine.set_beam_size.assert_called_once_with(1)
 
 
 class TestTrayMenuRecordingTimeout:

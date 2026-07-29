@@ -120,11 +120,8 @@ python -m venv .venv
 source .venv/bin/activate  # macOS
 # .venv\Scripts\activate   # Windows
 
-# Установить пакет с зависимостями для macOS
-pip install ".[macos]"
-
-# Или для Windows
-pip install ".[win32]"
+# Установить пакет
+pip install .
 ```
 
 Запуск:
@@ -210,10 +207,7 @@ python -c "from voice_dictation.platform.autostart import AutoStartManager; Auto
 cd voice-dictation
 python -m venv .venv
 source .venv/bin/activate  # macOS
-# macOS: включить PyObjC для Carbon/AppKit
-pip install -e ".[dev,macos]"
-# Windows:
-# pip install -e ".[dev]"
+pip install -e ".[dev]"
 ```
 
 ### Структура проекта

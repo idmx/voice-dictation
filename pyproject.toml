@@ -17,13 +17,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-macos = [
-    "pyobjc-framework-Quartz>=10.0",
-    "pyobjc-framework-AppKit>=10.0",
-    "pyobjc-framework-Carbon>=10.0",
-    "pyobjc-framework-Cocoa>=10.0",
-    "pyobjc-framework-CoreFoundation>=10.0",
-]
 dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",

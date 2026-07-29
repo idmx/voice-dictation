@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import sys
 from unittest.mock import MagicMock
 
 import pytest
 
 from voice_dictation.hotkey.pynput_listener import PynputListener
+
+pytestmark = pytest.mark.skipif(
+    sys.platform == "darwin",
+    reason="pynput not used on macOS (CarbonHotkeyListener instead)",
+)
 
 
 class FakeListener:

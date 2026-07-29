@@ -2,8 +2,11 @@
 
 from pathlib import Path
 
+from voice_dictation.config.defaults import DEFAULT_CONFIG
 from voice_dictation.config.manager import ConfigManager
 from voice_dictation.config.schema import AppConfig
+
+_DEFAULT_HOTKEY = DEFAULT_CONFIG.hotkey
 
 
 class TestConfigManager:
@@ -11,7 +14,7 @@ class TestConfigManager:
 
     def test_load_missing_file_returns_defaults(self, tmp_config_manager: ConfigManager) -> None:
         config = tmp_config_manager.load()
-        assert config.hotkey == "cmd+shift+1"
+        assert config.hotkey == _DEFAULT_HOTKEY
         assert config.language == "ru"
         assert config.whisper_model == "base"
 
@@ -36,7 +39,7 @@ class TestConfigManager:
         config_file.write_text("this is = not = valid toml [[", encoding="utf-8")
         manager = ConfigManager(config_dir=str(tmp_config_dir))
         config = manager.load()
-        assert config.hotkey == "cmd+shift+1"
+        assert config.hotkey == _DEFAULT_HOTKEY
         assert config.language == "ru"
 
     def test_load_missing_fields_merges_defaults(self, tmp_config_dir: Path) -> None:
@@ -77,7 +80,7 @@ class TestConfigManager:
 
     def test_config_property_after_load(self, tmp_config_manager: ConfigManager) -> None:
         tmp_config_manager.load()
-        assert tmp_config_manager.config.hotkey == "cmd+shift+1"
+        assert tmp_config_manager.config.hotkey == _DEFAULT_HOTKEY
 
     def test_invalid_hotkey_in_file_returns_defaults(self, tmp_config_dir: Path) -> None:
         config_file = tmp_config_dir / "config.toml"
@@ -87,7 +90,7 @@ class TestConfigManager:
         )
         manager = ConfigManager(config_dir=str(tmp_config_dir))
         config = manager.load()
-        assert config.hotkey == "cmd+shift+1"
+        assert config.hotkey == _DEFAULT_HOTKEY
 
     def test_load_from_fixture_valid(self, config_samples_dir: Path, tmp_config_dir: Path) -> None:
         valid_path = config_samples_dir / "valid.toml"
@@ -126,7 +129,7 @@ class TestConfigManager:
 
         manager = ConfigManager(config_dir=str(tmp_config_dir))
         config = manager.load()
-        assert config.hotkey == "cmd+shift+1"
+        assert config.hotkey == _DEFAULT_HOTKEY
 
     def test_save_then_reload_preserves_all_fields(self, tmp_config_dir: Path) -> None:
         manager = ConfigManager(config_dir=str(tmp_config_dir))
