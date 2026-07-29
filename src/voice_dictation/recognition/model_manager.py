@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import contextlib
+import io
 import shutil
+import sys
 import threading
 from collections.abc import Callable
 from pathlib import Path
@@ -187,11 +189,20 @@ class ModelManager:
                             pass
                     return result
 
-            return snapshot_download(
-                repo_id,
-                local_dir=str(output_dir),
-                tqdm_class=ProgressTqdm,
-            )
+            # On Windows without console, sys.stderr is None and tqdm crashes.
+            # Replace it temporarily with a dummy buffer.
+            old_stderr = sys.stderr
+            if old_stderr is None:
+                sys.stderr = io.StringIO()
+            try:
+                return snapshot_download(
+                    repo_id,
+                    local_dir=str(output_dir),
+                    tqdm_class=ProgressTqdm,
+                )
+            finally:
+                if old_stderr is None:
+                    sys.stderr = old_stderr
         except ImportError:
             # Fallback to faster_whisper.download_model (no progress)
             logger.warning("huggingface_hub not available, downloading without progress")

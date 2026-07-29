@@ -166,12 +166,22 @@ hdiutil create -volname "Voice Dictation" \
 
 ```powershell
 cd voice-dictation
+
+# Создать и активировать виртуальное окружение (Python 3.10–3.12)
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"
+
+# Запустить сборку
 powershell -ExecutionPolicy Bypass -File scripts\build_windows.ps1
 ```
 
 Результат:
 
 - `dist\voice-dictation\voice-dictation.exe` — исполняемый файл
+
+> Spec-файл автоматически находит `silero_vad_v6.onnx` через `import faster_whisper`,
+> поэтому версия Python не имеет значения — он не завязан на конкретный путь `.venv`.
 
 Установка:
 

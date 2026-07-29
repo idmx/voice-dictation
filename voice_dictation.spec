@@ -1,5 +1,17 @@
 # voice_dictation.spec
+import os
+import sys
+
+import faster_whisper
+
 block_cipher = None
+
+# Find silero_vad_v6.onnx dynamically — it's bundled with faster_whisper
+_silero_vad_path = os.path.join(
+    os.path.dirname(faster_whisper.__file__),
+    "assets",
+    "silero_vad_v6.onnx",
+)
 
 a = Analysis(
     ['src/voice_dictation/__main__.py'],
@@ -7,7 +19,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ('assets/icons', 'assets/icons'),
-        ('.venv/lib/python3.11/site-packages/faster_whisper/assets/silero_vad_v6.onnx', 'faster_whisper/assets'),
+        (_silero_vad_path, 'faster_whisper/assets'),
     ],
     hiddenimports=[
         'sounddevice',

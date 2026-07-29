@@ -21,12 +21,15 @@ def setup_logging(level: str = "INFO") -> None:
         "<level>{message}</level>"
     )
 
-    logger.add(
-        sys.stderr,
-        format=log_format,
-        level=level,
-        colorize=True,
-    )
+    # On Windows, sys.stderr may be None when running as a .exe without console
+    stderr = sys.stderr
+    if stderr is not None:
+        logger.add(
+            stderr,
+            format=log_format,
+            level=level,
+            colorize=True,
+        )
 
     log_dir = Path.home() / ".voice-dictation" / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -42,4 +45,5 @@ def setup_logging(level: str = "INFO") -> None:
         encoding="utf-8",
     )
 
-    logger.debug(f"Logging initialized at level {level}")
+    logger.debug(f"Logging initialized at level {level} "
+                 f"(stderr={'available' if stderr else 'none'})")
