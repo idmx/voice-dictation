@@ -8,7 +8,9 @@ import pytest
 from voice_dictation.utils.clipboard import ClipboardManager
 
 
-def make_completed_process(stdout: str | bytes = "", returncode: int = 0) -> subprocess.CompletedProcess:
+def make_completed_process(
+    stdout: str | bytes = "", returncode: int = 0
+) -> subprocess.CompletedProcess:
     # _read_clipboard_macos uses binary mode (no text=True),
     # so stdout must be bytes
     if isinstance(stdout, str):
@@ -272,8 +274,6 @@ class TestClipboardSaveRestoreRoundtrip:
 
         def popen_factory(*args, **kwargs):
             # Track input passed to communicate
-            original_communicate = mock_proc.communicate
-
             def tracking_communicate(*cargs, **ckwargs):
                 input_data = ckwargs.get("input", cargs[0] if cargs else b"")
                 written.append(input_data)
@@ -403,7 +403,7 @@ class TestBinaryClipboardData:
             patch(
                 "voice_dictation.utils.clipboard.subprocess.run",
                 return_value=subprocess.CompletedProcess(
-                    args=[], returncode=0, stdout=b'\x89PNG\r\n\x1a\n', stderr=b""
+                    args=[], returncode=0, stdout=b"\x89PNG\r\n\x1a\n", stderr=b""
                 ),
             ),
         ):
@@ -427,7 +427,7 @@ class TestWriteClipboardMacosEnv:
         env_arg = mock_popen.call_args.kwargs["env"]
         assert env_arg["LANG"] == "en_US.UTF-8"
         input_data = mock_proc.communicate.call_args.kwargs["input"]
-        assert input_data == "текст".encode("utf-8")
+        assert input_data == "текст".encode()
 
 
 class TestLinuxClipboard:
@@ -477,9 +477,7 @@ class TestSaveToFileFallback:
         cm._saved_clipboard_available = True
         with patch("voice_dictation.utils.clipboard.Path.home", return_value=tmp_path):
             cm._save_to_file_fallback()
-        fallback_file = (
-            tmp_path / ".voice-dictation" / "clipboard_backup" / "clipboard_backup.txt"
-        )
+        fallback_file = tmp_path / ".voice-dictation" / "clipboard_backup" / "clipboard_backup.txt"
         assert fallback_file.exists()
         assert fallback_file.read_text(encoding="utf-8") == "fallback content"
 

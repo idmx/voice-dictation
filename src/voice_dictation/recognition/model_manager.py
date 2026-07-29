@@ -7,7 +7,6 @@ import shutil
 import threading
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
 
 from loguru import logger
 
@@ -79,9 +78,7 @@ class ModelManager:
                             f"({len(incomplete_files)} .incomplete files)"
                         )
                     else:
-                        logger.warning(
-                            f"Model '{model_size}' missing model.bin"
-                        )
+                        logger.warning(f"Model '{model_size}' missing model.bin")
                     return False
 
             total_size = sum(
@@ -126,7 +123,9 @@ class ModelManager:
                 return model_path
 
             if self.is_model_cached(model_size) and not self.verify_model(model_size):
-                logger.warning(f"Corrupted/incomplete model '{model_size}', removing and re-downloading")
+                logger.warning(
+                    f"Corrupted/incomplete model '{model_size}', removing and re-downloading"
+                )
                 self.remove_model(model_size)
 
             # Clean up any leftover .incomplete files from previous attempts

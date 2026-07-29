@@ -74,7 +74,9 @@ def state_machine() -> StateMachine:
 
 @pytest.fixture
 def default_config() -> AppConfig:
-    return AppConfig(mode="push_to_talk", hotkey="cmd+shift+1", language="ru", auto_punctuation=False)
+    return AppConfig(
+        mode="push_to_talk", hotkey="cmd+shift+1", language="ru", auto_punctuation=False
+    )
 
 
 @pytest.fixture
@@ -558,7 +560,9 @@ class TestRecordingTimeout:
         assert pipeline._recording_timer is None
 
     def test_recording_timer_cancelled_on_force_idle(
-        self, pipeline: DictationPipeline, mock_audio: MagicMock,
+        self,
+        pipeline: DictationPipeline,
+        mock_audio: MagicMock,
         state_machine: StateMachine,
     ) -> None:
         pipeline._on_hotkey_down()
@@ -568,7 +572,9 @@ class TestRecordingTimeout:
         assert pipeline._recording_timer is None
 
     def test_recording_timeout_force_stops(
-        self, pipeline: DictationPipeline, mock_audio: MagicMock,
+        self,
+        pipeline: DictationPipeline,
+        mock_audio: MagicMock,
         state_machine: StateMachine,
     ) -> None:
         """Simulate the safety timer firing — should stop recording and transcribe."""
@@ -592,7 +598,9 @@ class TestRecordingTimeout:
         mock_audio.stop.assert_not_called()
 
     def test_recording_timeout_with_empty_audio_goes_to_idle(
-        self, pipeline: DictationPipeline, mock_audio: MagicMock,
+        self,
+        pipeline: DictationPipeline,
+        mock_audio: MagicMock,
         state_machine: StateMachine,
     ) -> None:
         """If timeout fires but audio is empty, force IDLE (no transcription)."""
@@ -602,7 +610,9 @@ class TestRecordingTimeout:
         assert state_machine.state == State.IDLE
 
     def test_recording_timeout_with_silent_audio_goes_to_idle(
-        self, pipeline: DictationPipeline, mock_audio: MagicMock,
+        self,
+        pipeline: DictationPipeline,
+        mock_audio: MagicMock,
         state_machine: StateMachine,
     ) -> None:
         """If timeout fires but audio is silence, force IDLE (no transcription)."""
@@ -612,8 +622,11 @@ class TestRecordingTimeout:
         assert state_machine.state == State.IDLE
 
     def test_recording_timer_uses_config_timeout(
-        self, state_machine: StateMachine, mock_audio: MagicMock,
-        mock_recognition: MagicMock, mock_injector: MagicMock,
+        self,
+        state_machine: StateMachine,
+        mock_audio: MagicMock,
+        mock_recognition: MagicMock,
+        mock_injector: MagicMock,
         mock_hotkey: MagicMock,
     ) -> None:
         """Timer should use the configured max_recording_seconds value."""

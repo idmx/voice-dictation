@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Callable
+from contextlib import suppress
 from pathlib import Path
 
 import numpy as np
@@ -61,8 +62,9 @@ class WhisperEngine(RecognitionEngine):
             if self._model is not None:
                 return
             try:
-                if self._model_manager.is_model_cached(self._model_size) and \
-                   self._model_manager.verify_model(self._model_size):
+                if self._model_manager.is_model_cached(
+                    self._model_size
+                ) and self._model_manager.verify_model(self._model_size):
                     model_path = self._model_manager.get_model_path(self._model_size)
                     # faster-whisper downloads to a subdirectory; find the
                     # directory that actually contains model.bin
@@ -119,14 +121,13 @@ class WhisperEngine(RecognitionEngine):
                 # Explicitly delete the model to free memory (including GPU/CUDA).
                 # Simply setting to None may not release CTranslate2's internal
                 # caches and CUDA allocations.
-                try:
+                with suppress(Exception):
                     del self._model
-                except Exception:
-                    pass
                 self._model = None
                 # Attempt to release CUDA memory if torch is available
                 try:
                     import torch
+
                     if torch.cuda.is_available():
                         torch.cuda.empty_cache()
                 except ImportError:

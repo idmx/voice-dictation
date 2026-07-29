@@ -8,8 +8,6 @@ from __future__ import annotations
 
 import re
 
-from loguru import logger
-
 
 def apply_auto_punctuation(text: str, language: str = "ru") -> str:
     """Apply auto-punctuation rules to transcription text.
@@ -71,15 +69,15 @@ def _russian_comma_rules(text: str) -> str:
     # Conjunctions that typically need a comma before them
     # Only insert if preceded by a word character (letter) and no comma already
     conjunctions = [
-        "но",      # but
-        "а",       # but/and (contrastive)
-        "или",     # or
-        "что",     # that (subordinating)
-        "чтобы",   # in order to
+        "но",  # but
+        "а",  # but/and (contrastive)
+        "или",  # or
+        "что",  # that (subordinating)
+        "чтобы",  # in order to
         "потому",  # because
-        "если",    # if
-        "когда",   # when
-        "хотя",    # although
+        "если",  # if
+        "когда",  # when
+        "хотя",  # although
         "однако",  # however
     ]
 

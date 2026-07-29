@@ -37,14 +37,16 @@ class AppConfig(BaseModel):
     restore_clipboard: bool = Field(default=True, description="Restore clipboard after injection")
     initial_prompt: str = Field(
         default="Текст на русском языке.",
-        description="Initial prompt for Whisper context — improves recognition accuracy and punctuation",
+        description="Initial prompt for Whisper context — accuracy & punctuation",
     )
     auto_punctuation: bool = Field(default=True, description="Enable automatic punctuation")
     beam_size: Literal[1, 3, 5] = Field(
         default=5, description="Beam size: 1=fast, 3=balanced, 5=accurate"
     )
     max_recording_seconds: int = Field(
-        default=30, ge=5, le=300,
+        default=30,
+        ge=5,
+        le=300,
         description="Safety timeout: force-stop recording after N seconds if key-up is lost",
     )
     model_cache_dir: str = Field(
@@ -74,9 +76,7 @@ class AppConfig(BaseModel):
         expanded = Path(v).expanduser().resolve()
         allowed = Path.home() / ".voice-dictation"
         if not str(expanded).startswith(str(allowed.resolve())):
-            raise ValueError(
-                f"model_cache_dir must be under ~/.voice-dictation/, got '{v}'"
-            )
+            raise ValueError(f"model_cache_dir must be under ~/.voice-dictation/, got '{v}'")
         return v
 
     model_config = {"extra": "ignore"}

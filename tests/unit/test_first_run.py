@@ -31,9 +31,7 @@ def mock_model_manager() -> MagicMock:
 
 
 @pytest.fixture
-def wizard(
-    mock_config_manager: MagicMock, mock_model_manager: MagicMock
-) -> FirstRunWizard:
+def wizard(mock_config_manager: MagicMock, mock_model_manager: MagicMock) -> FirstRunWizard:
     """Provide a FirstRunWizard with mocked dependencies."""
     return FirstRunWizard(
         config_manager=mock_config_manager,
@@ -60,8 +58,10 @@ class TestRun:
         mock_config_manager: MagicMock,
         mock_model_manager: MagicMock,
     ) -> None:
-        with patch.object(wizard, "check_permissions", return_value=ALL_GRANTED), \
-             patch.object(wizard, "test_microphone", return_value=True):
+        with (
+            patch.object(wizard, "check_permissions", return_value=ALL_GRANTED),
+            patch.object(wizard, "test_microphone", return_value=True),
+        ):
             result = wizard.run()
 
         assert result is True
@@ -72,16 +72,20 @@ class TestRun:
         wizard: FirstRunWizard,
         mock_model_manager: MagicMock,
     ) -> None:
-        with patch.object(wizard, "check_permissions", return_value=ALL_GRANTED), \
-             patch.object(wizard, "test_microphone", return_value=True):
+        with (
+            patch.object(wizard, "check_permissions", return_value=ALL_GRANTED),
+            patch.object(wizard, "test_microphone", return_value=True),
+        ):
             wizard.run()
 
         mock_model_manager.download_model.assert_called_once_with("base")
 
     def test_run_tests_microphone(self, wizard: FirstRunWizard) -> None:
-        with patch.object(wizard, "check_permissions", return_value=ALL_GRANTED), \
-             patch.object(wizard, "download_model", return_value=True), \
-             patch.object(wizard, "test_microphone", return_value=True) as mock_mic:
+        with (
+            patch.object(wizard, "check_permissions", return_value=ALL_GRANTED),
+            patch.object(wizard, "download_model", return_value=True),
+            patch.object(wizard, "test_microphone", return_value=True) as mock_mic,
+        ):
             wizard.run()
 
         mock_mic.assert_called_once()
@@ -98,8 +102,10 @@ class TestRun:
         mock_model_manager: MagicMock,
     ) -> None:
         mock_model_manager.download_model.side_effect = RuntimeError("download failed")
-        with patch.object(wizard, "check_permissions", return_value=ALL_GRANTED), \
-             patch.object(wizard, "test_microphone", return_value=True):
+        with (
+            patch.object(wizard, "check_permissions", return_value=ALL_GRANTED),
+            patch.object(wizard, "test_microphone", return_value=True),
+        ):
             result = wizard.run()
 
         assert result is False
@@ -146,17 +152,13 @@ class TestDownloadModel:
 
 class TestTestMicrophone:
     def test_test_microphone_success(self, wizard: FirstRunWizard) -> None:
-        with patch(
-            "voice_dictation.ui.first_run.check_microphone", return_value=True
-        ):
+        with patch("voice_dictation.ui.first_run.check_microphone", return_value=True):
             result = wizard.test_microphone()
 
         assert result is True
 
     def test_test_microphone_failure(self, wizard: FirstRunWizard) -> None:
-        with patch(
-            "voice_dictation.ui.first_run.check_microphone", return_value=False
-        ):
+        with patch("voice_dictation.ui.first_run.check_microphone", return_value=False):
             result = wizard.test_microphone()
 
         assert result is False

@@ -115,9 +115,7 @@ class AutoStartManager:
         try:
             import winreg
 
-            key = winreg.OpenKey(
-                winreg.HKEY_CURRENT_USER, REGISTRY_KEY, 0, winreg.KEY_SET_VALUE
-            )
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, REGISTRY_KEY, 0, winreg.KEY_SET_VALUE)
             winreg.SetValueEx(key, REGISTRY_VALUE_NAME, 0, winreg.REG_SZ, self._app_path)
             winreg.CloseKey(key)
             logger.info("Registry entry created for auto-start")
@@ -131,9 +129,7 @@ class AutoStartManager:
         try:
             import winreg
 
-            key = winreg.OpenKey(
-                winreg.HKEY_CURRENT_USER, REGISTRY_KEY, 0, winreg.KEY_SET_VALUE
-            )
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, REGISTRY_KEY, 0, winreg.KEY_SET_VALUE)
             winreg.DeleteValue(key, REGISTRY_VALUE_NAME)
             winreg.CloseKey(key)
             logger.info("Registry entry removed for auto-start")
@@ -150,9 +146,7 @@ class AutoStartManager:
         try:
             import winreg
 
-            key = winreg.OpenKey(
-                winreg.HKEY_CURRENT_USER, REGISTRY_KEY, 0, winreg.KEY_READ
-            )
+            key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, REGISTRY_KEY, 0, winreg.KEY_READ)
             try:
                 winreg.QueryValueEx(key, REGISTRY_VALUE_NAME)
                 return True

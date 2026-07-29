@@ -33,8 +33,7 @@ from voice_dictation.hotkey.hotkey_parser import HotkeyParser
 # ---------------------------------------------------------------------------
 
 _HITOOLBOX_PATH = (
-    "/System/Library/Frameworks/Carbon.framework/"
-    "Frameworks/HIToolbox.framework/HIToolbox"
+    "/System/Library/Frameworks/Carbon.framework/Frameworks/HIToolbox.framework/HIToolbox"
 )
 
 try:
@@ -79,25 +78,88 @@ _HOTKEY_SIGNATURE = 0x56444848  # 'VDHH'
 
 # macOS virtual key codes (same as QuartzHotkeyListener)
 _VK_MAP: dict[str, int] = {
-    "a": 0x00, "s": 0x01, "d": 0x02, "f": 0x03, "h": 0x04,
-    "g": 0x05, "z": 0x06, "x": 0x07, "c": 0x08, "v": 0x09,
-    "b": 0x0B, "q": 0x0C, "w": 0x0D, "e": 0x0E, "r": 0x0F,
-    "y": 0x10, "t": 0x11, "1": 0x12, "2": 0x13, "3": 0x14,
-    "4": 0x15, "6": 0x16, "5": 0x17, "=": 0x18, "9": 0x19,
-    "7": 0x1A, "-": 0x1B, "8": 0x1C, "0": 0x1D, "]": 0x1E,
-    "o": 0x1F, "u": 0x20, "[": 0x21, "i": 0x22, "p": 0x23,
-    "enter": 0x24, "l": 0x25, "j": 0x26, "'": 0x27, "k": 0x28,
-    ";": 0x29, "\\": 0x2A, ",": 0x2B, "/": 0x2C, "n": 0x2D,
-    "m": 0x2E, ".": 0x2F, "tab": 0x30, "space": 0x31,
-    "`": 0x32, "backspace": 0x33, "esc": 0x35,
-    "f1": 0x7A, "f2": 0x78, "f3": 0x63, "f4": 0x76,
-    "f5": 0x60, "f6": 0x61, "f7": 0x62, "f8": 0x64,
-    "f9": 0x65, "f10": 0x6D, "f11": 0x67, "f12": 0x6F,
-    "f13": 0x69, "f14": 0x6B, "f15": 0x71, "f16": 0x6A,
-    "f17": 0x40, "f18": 0x4F, "f19": 0x50, "f20": 0x5A,
-    "home": 0x73, "end": 0x77, "page_up": 0x74, "page_down": 0x79,
-    "left": 0x7B, "right": 0x7C, "down": 0x7D, "up": 0x7E,
-    "delete": 0x75, "insert": 0x72,
+    "a": 0x00,
+    "s": 0x01,
+    "d": 0x02,
+    "f": 0x03,
+    "h": 0x04,
+    "g": 0x05,
+    "z": 0x06,
+    "x": 0x07,
+    "c": 0x08,
+    "v": 0x09,
+    "b": 0x0B,
+    "q": 0x0C,
+    "w": 0x0D,
+    "e": 0x0E,
+    "r": 0x0F,
+    "y": 0x10,
+    "t": 0x11,
+    "1": 0x12,
+    "2": 0x13,
+    "3": 0x14,
+    "4": 0x15,
+    "6": 0x16,
+    "5": 0x17,
+    "=": 0x18,
+    "9": 0x19,
+    "7": 0x1A,
+    "-": 0x1B,
+    "8": 0x1C,
+    "0": 0x1D,
+    "]": 0x1E,
+    "o": 0x1F,
+    "u": 0x20,
+    "[": 0x21,
+    "i": 0x22,
+    "p": 0x23,
+    "enter": 0x24,
+    "l": 0x25,
+    "j": 0x26,
+    "'": 0x27,
+    "k": 0x28,
+    ";": 0x29,
+    "\\": 0x2A,
+    ",": 0x2B,
+    "/": 0x2C,
+    "n": 0x2D,
+    "m": 0x2E,
+    ".": 0x2F,
+    "tab": 0x30,
+    "space": 0x31,
+    "`": 0x32,
+    "backspace": 0x33,
+    "esc": 0x35,
+    "f1": 0x7A,
+    "f2": 0x78,
+    "f3": 0x63,
+    "f4": 0x76,
+    "f5": 0x60,
+    "f6": 0x61,
+    "f7": 0x62,
+    "f8": 0x64,
+    "f9": 0x65,
+    "f10": 0x6D,
+    "f11": 0x67,
+    "f12": 0x6F,
+    "f13": 0x69,
+    "f14": 0x6B,
+    "f15": 0x71,
+    "f16": 0x6A,
+    "f17": 0x40,
+    "f18": 0x4F,
+    "f19": 0x50,
+    "f20": 0x5A,
+    "home": 0x73,
+    "end": 0x77,
+    "page_up": 0x74,
+    "page_down": 0x79,
+    "left": 0x7B,
+    "right": 0x7C,
+    "down": 0x7D,
+    "up": 0x7E,
+    "delete": 0x75,
+    "insert": 0x72,
 }
 
 
@@ -269,9 +331,7 @@ class CarbonHotkeyListener(HotkeyListener):
         if vk_code is None:
             from voice_dictation.core.exceptions import InvalidHotkeyError
 
-            raise InvalidHotkeyError(
-                f"Key {key_str!r} has no macOS virtual key code mapping"
-            )
+            raise InvalidHotkeyError(f"Key {key_str!r} has no macOS virtual key code mapping")
 
         carbon_modifiers = 0
         for mod in modifiers_str:
@@ -313,9 +373,7 @@ class CarbonHotkeyListener(HotkeyListener):
         if platform.system() != "Darwin":
             raise RuntimeError("CarbonHotkeyListener is only available on macOS")
         if not _CARBON_AVAILABLE:
-            raise RuntimeError(
-                "HIToolbox framework is not available (macOS only)"
-            )
+            raise RuntimeError("HIToolbox framework is not available (macOS only)")
 
         with self._lock:
             if self._running:
@@ -353,9 +411,7 @@ class CarbonHotkeyListener(HotkeyListener):
         import threading
 
         try:
-            libdispatch = ctypes.cdll.LoadLibrary(
-                "/usr/lib/system/libdispatch.dylib"
-            )
+            libdispatch = ctypes.cdll.LoadLibrary("/usr/lib/system/libdispatch.dylib")
 
             dispatch_get_main_queue = libdispatch.dispatch_get_main_queue
             dispatch_get_main_queue.restype = ctypes.c_void_p
@@ -374,7 +430,9 @@ class CarbonHotkeyListener(HotkeyListener):
             CarbonHotkeyListener._pending_callbacks.append(callback)
             # Prevent unbounded growth — keep only recent callbacks
             if len(CarbonHotkeyListener._pending_callbacks) > 10:
-                CarbonHotkeyListener._pending_callbacks = CarbonHotkeyListener._pending_callbacks[-5:]
+                CarbonHotkeyListener._pending_callbacks = CarbonHotkeyListener._pending_callbacks[
+                    -5:
+                ]
 
             dispatch_async_f(dispatch_get_main_queue(), None, callback)
         except Exception as e:
@@ -458,15 +516,13 @@ class CarbonHotkeyListener(HotkeyListener):
 
             if status != 0:
                 logger.error(
-                    f"RegisterEventHotKey failed for '{reg.hotkey_str}' "
-                    f"with status {status}"
+                    f"RegisterEventHotKey failed for '{reg.hotkey_str}' with status {status}"
                 )
                 continue
 
             reg.ref = ref.value or 0
             logger.debug(
-                f"Registered hotkey '{reg.hotkey_str}' "
-                f"(id={reg.hotkey_id}, ref={reg.ref})"
+                f"Registered hotkey '{reg.hotkey_str}' (id={reg.hotkey_id}, ref={reg.ref})"
             )
 
     def _cleanup(self) -> None:
@@ -529,10 +585,7 @@ class CarbonHotkeyListener(HotkeyListener):
                 return 0
 
             hotkey_id = hotkey_id_struct.id
-            logger.info(
-                f"Hotkey event: id={hotkey_id}, "
-                f"signature={hotkey_id_struct.signature:#x}"
-            )
+            logger.info(f"Hotkey event: id={hotkey_id}, signature={hotkey_id_struct.signature:#x}")
 
             with self._lock:
                 hotkey_str = self._id_to_hotkey.get(hotkey_id)
@@ -557,9 +610,7 @@ class CarbonHotkeyListener(HotkeyListener):
     # Hotkey event dispatching
     # ------------------------------------------------------------------
 
-    def _handle_key_down(
-        self, hotkey: str, reg: _CarbonRegistration
-    ) -> None:
+    def _handle_key_down(self, hotkey: str, reg: _CarbonRegistration) -> None:
         try:
             if self._mode == "push_to_talk":
                 if not self._activated.get(hotkey, False):
@@ -573,9 +624,7 @@ class CarbonHotkeyListener(HotkeyListener):
         except Exception as e:
             logger.error(f"Hotkey callback error on key-down: {e}")
 
-    def _handle_key_up(
-        self, hotkey: str, reg: _CarbonRegistration
-    ) -> None:
+    def _handle_key_up(self, hotkey: str, reg: _CarbonRegistration) -> None:
         if self._mode != "push_to_talk":
             return
         try:

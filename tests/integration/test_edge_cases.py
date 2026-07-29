@@ -211,9 +211,7 @@ def _wait_for_state(sm: StateMachine, state: State, timeout: float = 5.0) -> boo
 @pytest.mark.timeout(10)
 class TestMicrophoneDisconnectMidRecording:
     def test_microphone_disconnect_mid_recording(self) -> None:
-        audio = MockAudioCapture(
-            stop_side_effect=AudioDeviceError("Microphone disconnected")
-        )
+        audio = MockAudioCapture(stop_side_effect=AudioDeviceError("Microphone disconnected"))
         engine = MockRecognitionEngine()
         injector = MockTextInjector()
         pipeline, sm, listener, _, _, _ = _make_pipeline(
@@ -368,9 +366,7 @@ class TestVeryLongTranscription:
 @pytest.mark.timeout(10)
 class TestSpecialCharactersInResult:
     def test_special_characters_in_result(self) -> None:
-        special_text = (
-            "Привет\tмир\nновая строка \"кавычки\" 'одиночные' и $pecial %chars%"
-        )
+        special_text = "Привет\tмир\nновая строка \"кавычки\" 'одиночные' и $pecial %chars%"
         audio = MockAudioCapture()
         engine = MockRecognitionEngine(transcription_result=special_text)
         injector = MockTextInjector()
@@ -616,9 +612,7 @@ class TestRapidPressReleaseCycles:
             listener.simulate_press()
             assert sm.state == State.RECORDING
             listener.simulate_release()
-            assert _wait_for_state(sm, State.IDLE, timeout=5.0), (
-                f"Cycle {i} did not complete"
-            )
+            assert _wait_for_state(sm, State.IDLE, timeout=5.0), f"Cycle {i} did not complete"
 
         assert engine.transcribe_called == 3
         assert len(injector.injected_texts) == 3
@@ -647,7 +641,9 @@ class TestConfigChangeDuringRecording:
         audio = MockAudioCapture()
         engine = SlowEngine(transcription_result="Запись")
         injector = MockTextInjector()
-        config = AppConfig(mode="push_to_talk", hotkey="cmd+shift+1", language="ru", auto_punctuation=False)
+        config = AppConfig(
+            mode="push_to_talk", hotkey="cmd+shift+1", language="ru", auto_punctuation=False
+        )
         pipeline, sm, listener, _, _, _ = _make_pipeline(
             audio=audio, engine=engine, injector=injector, config=config
         )

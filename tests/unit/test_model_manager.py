@@ -77,9 +77,9 @@ class TestDownloadModel:
                 "_download_with_progress",
                 side_effect=RuntimeError("download failed"),
             ),
+            pytest.raises(ModelNotFoundError, match="Failed to download"),
         ):
-            with pytest.raises(ModelNotFoundError, match="Failed to download"):
-                model_manager.download_model("tiny")
+            model_manager.download_model("tiny")
 
         assert not model_path.exists()
 

@@ -136,6 +136,7 @@ class TestPlayAsync:
         created_threads: list[threading.Thread] = []
 
         with patch("voice_dictation.ui.indicators.threading.Thread") as mock_thread_cls:
+
             def capture_thread(*a, **kw):
                 t = original_thread(*a, **kw)
                 created_threads.append(t)

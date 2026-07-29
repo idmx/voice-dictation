@@ -38,18 +38,18 @@ class TestMacOSEnable:
     def test_enable_macos(self, mock_sys: MagicMock, manager: AutoStartManager) -> None:
         mock_sys.platform = "darwin"
 
-        with patch.object(Path, "mkdir"), \
-             patch.object(Path, "write_bytes") as mock_write, \
-             patch("voice_dictation.platform.autostart.plistlib.dumps", return_value=b"plist-data"):
+        with (
+            patch.object(Path, "mkdir"),
+            patch.object(Path, "write_bytes") as mock_write,
+            patch("voice_dictation.platform.autostart.plistlib.dumps", return_value=b"plist-data"),
+        ):
             result = manager.enable()
 
         assert result is True
         mock_write.assert_called_once_with(b"plist-data")
 
     @patch("voice_dictation.platform.autostart.sys")
-    def test_enable_macos_failure(
-        self, mock_sys: MagicMock, manager: AutoStartManager
-    ) -> None:
+    def test_enable_macos_failure(self, mock_sys: MagicMock, manager: AutoStartManager) -> None:
         mock_sys.platform = "darwin"
         with patch.object(Path, "mkdir", side_effect=PermissionError("denied")):
             result = manager.enable()
@@ -59,21 +59,19 @@ class TestMacOSEnable:
 
 class TestMacOSDisable:
     @patch("voice_dictation.platform.autostart.sys")
-    def test_disable_macos(
-        self, mock_sys: MagicMock, manager: AutoStartManager
-    ) -> None:
+    def test_disable_macos(self, mock_sys: MagicMock, manager: AutoStartManager) -> None:
         mock_sys.platform = "darwin"
-        with patch.object(Path, "exists", return_value=True), \
-             patch.object(Path, "unlink") as mock_unlink:
+        with (
+            patch.object(Path, "exists", return_value=True),
+            patch.object(Path, "unlink") as mock_unlink,
+        ):
             result = manager.disable()
 
         assert result is True
         mock_unlink.assert_called_once()
 
     @patch("voice_dictation.platform.autostart.sys")
-    def test_disable_macos_no_plist(
-        self, mock_sys: MagicMock, manager: AutoStartManager
-    ) -> None:
+    def test_disable_macos_no_plist(self, mock_sys: MagicMock, manager: AutoStartManager) -> None:
         mock_sys.platform = "darwin"
         with patch.object(Path, "exists", return_value=False):
             result = manager.disable()
@@ -83,17 +81,13 @@ class TestMacOSDisable:
 
 class TestMacOSIsEnabled:
     @patch("voice_dictation.platform.autostart.sys")
-    def test_is_enabled_true_macos(
-        self, mock_sys: MagicMock, manager: AutoStartManager
-    ) -> None:
+    def test_is_enabled_true_macos(self, mock_sys: MagicMock, manager: AutoStartManager) -> None:
         mock_sys.platform = "darwin"
         with patch.object(Path, "exists", return_value=True):
             assert manager.is_enabled() is True
 
     @patch("voice_dictation.platform.autostart.sys")
-    def test_is_enabled_false_macos(
-        self, mock_sys: MagicMock, manager: AutoStartManager
-    ) -> None:
+    def test_is_enabled_false_macos(self, mock_sys: MagicMock, manager: AutoStartManager) -> None:
         mock_sys.platform = "darwin"
         with patch.object(Path, "exists", return_value=False):
             assert manager.is_enabled() is False

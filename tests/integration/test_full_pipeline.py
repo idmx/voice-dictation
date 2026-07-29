@@ -203,7 +203,9 @@ def ptt_components():
     sm = StateMachine()
     tracker = _StateTracker()
     sm.on_transition(tracker)
-    cfg = AppConfig(mode="push_to_talk", hotkey="cmd+shift+1", language="ru", auto_punctuation=False)
+    cfg = AppConfig(
+        mode="push_to_talk", hotkey="cmd+shift+1", language="ru", auto_punctuation=False
+    )
     pipeline = DictationPipeline(
         state_machine=sm,
         audio_capture=audio,

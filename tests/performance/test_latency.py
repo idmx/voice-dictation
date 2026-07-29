@@ -178,7 +178,9 @@ def _make_pipeline(
         engine = MockRecognitionEngine()
     if injector is None:
         injector = MockTextInjector()
-    config = AppConfig(mode="push_to_talk", hotkey="cmd+shift+1", language="ru", auto_punctuation=False)
+    config = AppConfig(
+        mode="push_to_talk", hotkey="cmd+shift+1", language="ru", auto_punctuation=False
+    )
     listener = MockHotkeyListener(mode="push_to_talk")
     sm = StateMachine()
     pipeline = DictationPipeline(

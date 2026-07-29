@@ -89,9 +89,7 @@ class DictationPipeline:
         # Shutdown old executor if it was previously used
         if self._executor._shutdown:
             old_executor = self._executor
-            self._executor = ThreadPoolExecutor(
-                max_workers=1, thread_name_prefix="transcribe"
-            )
+            self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="transcribe")
             old_executor.shutdown(wait=False)
         deactivate = self._on_hotkey_up if self._config.mode == "push_to_talk" else None
         self._hotkey_listener.register(
@@ -198,9 +196,7 @@ class DictationPipeline:
         self._cancel_recording_timer()
         self._recording_start_time = time.monotonic()
         timeout = getattr(self._config, "max_recording_seconds", _DEFAULT_MAX_RECORDING_SECONDS)
-        self._recording_timer = threading.Timer(
-            timeout, self._on_recording_timeout
-        )
+        self._recording_timer = threading.Timer(timeout, self._on_recording_timeout)
         self._recording_timer.daemon = True
         self._recording_timer.start()
 
@@ -217,9 +213,7 @@ class DictationPipeline:
         stop audio capture if still recording, and return to IDLE.
         """
         timeout = getattr(self._config, "max_recording_seconds", _DEFAULT_MAX_RECORDING_SECONDS)
-        logger.warning(
-            f"Recording safety timeout after {timeout}s — forcing stop"
-        )
+        logger.warning(f"Recording safety timeout after {timeout}s — forcing stop")
         with self._pipeline_lock:
             if self._state_machine.state != State.RECORDING:
                 return

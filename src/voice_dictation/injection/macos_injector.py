@@ -34,7 +34,6 @@ def _check_ax_enabled(prompt: bool = False) -> bool:
     """
     try:
         from ApplicationServices import AXIsProcessTrustedWithOptions
-        from CoreFoundation import kCFPreferencesCurrentUser
 
         options = {"AXTrustedCheckOptionPrompt": prompt}
         return AXIsProcessTrustedWithOptions(options)
@@ -125,8 +124,7 @@ class MacOSTextInjector(TextInjector):
             # Keep the transcribed text on the clipboard so the user
             # can manually press Cmd+V to paste it.
             logger.info(
-                "Paste may have failed — text remains on clipboard. "
-                "Press Cmd+V to paste manually."
+                "Paste may have failed — text remains on clipboard. Press Cmd+V to paste manually."
             )
 
     def _inject_via_typing(self, text: str) -> None:
@@ -178,8 +176,7 @@ class MacOSTextInjector(TextInjector):
                 logger.info("Simulated Cmd+V via osascript")
                 return True
             logger.warning(
-                f"osascript Cmd+V failed (rc={result.returncode}): "
-                f"{result.stderr.strip()}"
+                f"osascript Cmd+V failed (rc={result.returncode}): {result.stderr.strip()}"
             )
         except FileNotFoundError:
             logger.warning("osascript not found, falling back to CGEvent")
@@ -236,15 +233,11 @@ class MacOSTextInjector(TextInjector):
         def _do_post() -> None:
             try:
                 quartz = MacOSTextInjector._import_quartz()
-                v_down = quartz.CGEventCreateKeyboardEvent(
-                    None, _CMD_V_KEYCODE, True
-                )
+                v_down = quartz.CGEventCreateKeyboardEvent(None, _CMD_V_KEYCODE, True)
                 quartz.CGEventSetFlags(v_down, _KCGEVENTFLAGMASKCOMMAND)
                 quartz.CGEventPost(_KCGHIDEVENTTAP, v_down)
 
-                v_up = quartz.CGEventCreateKeyboardEvent(
-                    None, _CMD_V_KEYCODE, False
-                )
+                v_up = quartz.CGEventCreateKeyboardEvent(None, _CMD_V_KEYCODE, False)
                 quartz.CGEventSetFlags(v_up, _KCGEVENTFLAGMASKCOMMAND)
                 quartz.CGEventPost(_KCGHIDEVENTTAP, v_up)
             except Exception as exc:

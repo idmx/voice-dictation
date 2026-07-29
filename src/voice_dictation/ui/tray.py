@@ -410,9 +410,7 @@ class TrayIcon:
                         self._app._recognition_engine.set_progress_callback(None)
                         self.set_model_loading(False)
 
-                threading.Thread(
-                    target=_bg_reload, daemon=True, name="model-reload"
-                ).start()
+                threading.Thread(target=_bg_reload, daemon=True, name="model-reload").start()
             else:
                 self.set_model_loading(False)
         except Exception as exc:
@@ -505,6 +503,7 @@ class TrayIcon:
         """Persist config to file and refresh tray menu."""
         try:
             from voice_dictation.config.manager import ConfigManager
+
             ConfigManager().save(self._config)
         except Exception as exc:
             logger.warning(f"Failed to save config change: {exc}")

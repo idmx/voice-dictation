@@ -162,17 +162,20 @@ class TestTrayMenuBeamSizeSwitch:
         The lambda uses *_ to absorb positional args, so the captured
         default value must be used, not any positional argument.
         """
-        import pystray
 
         tray = TrayIcon(config, app=mock_app)
-        menu = tray._create_menu()
+        tray._create_menu()
 
         # Find the "Качество" submenu and click "Быстро (1)"
         # Menu items: [status, SEP, Модель, Язык, Режим, Качество, ...]
         # Walk the menu to find beam size items
         from voice_dictation.ui.tray import _AVAILABLE_BEAM_SIZES
 
-        for label, val in _AVAILABLE_BEAM_SIZES:
+        for _label, val in _AVAILABLE_BEAM_SIZES:
+            if val == 1:
+                # Simulate: the lambda is called by pystray with (icon, item)
+                # We verify the lambda captures the right value
+                pass
             if val == 1:
                 # Simulate: the lambda is called by pystray with (icon, item)
                 # We verify the lambda captures the right value
@@ -314,8 +317,9 @@ class TestTrayStartNoPystray:
 class TestTrayLoadIconFromFile:
     def test_load_existing_icon_file(self, tray) -> None:
         mock_img = Image.new("RGBA", (64, 64), (255, 0, 0, 255))
-        with patch.object(Path, "exists", return_value=True), patch(
-            "voice_dictation.ui.tray.Image.open", return_value=mock_img
+        with (
+            patch.object(Path, "exists", return_value=True),
+            patch("voice_dictation.ui.tray.Image.open", return_value=mock_img),
         ):
             result = tray._load_icon("idle")
         assert result is mock_img
